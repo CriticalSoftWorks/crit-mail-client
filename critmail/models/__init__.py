@@ -1,0 +1,56 @@
+"""
+CritMail Database Models and Schema
+"""
+from critmail.models.database import (
+    init_db,
+    add_account,
+    update_account,
+    delete_account,
+    get_accounts,
+    get_account_by_id,
+    get_folders_for_account,
+    get_folder_by_type,
+    create_custom_folder,
+    get_messages_in_folder,
+    get_message_full,
+    mark_message_read,
+    mark_all_read_in_folder,
+    toggle_message_flag,
+    move_message_to_folder,
+    delete_message,
+    empty_trash_for_account,
+    get_unread_count,
+    get_total_count,
+    get_contacts,
+    add_or_update_contact,
+    delete_contact,
+    get_setting,
+    set_setting
+)
+
+__all__ = [
+    "init_db",
+    "add_account",
+    "update_account",
+    "delete_account",
+    "get_accounts",
+    "get_account_by_id",
+    "get_folders_for_account",
+    "get_folder_by_type",
+    "create_custom_folder",
+    "get_messages_in_folder",
+    "get_message_full",
+    "mark_message_read",
+    "mark_all_read_in_folder",
+    "toggle_message_flag",
+    "move_message_to_folder",
+    "delete_message",
+    "empty_trash_for_account",
+    "get_unread_count",
+    "get_total_count",
+    "get_contacts",
+    "add_or_update_contact",
+    "delete_contact",
+    "get_setting",
+    "set_setting"
+]
