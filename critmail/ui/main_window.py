@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTreeWidget, QTreeWidgetItem,
     QTableWidget, QTableWidgetItem, QTextBrowser, QLabel, QPushButton,
     QLineEdit, QHeaderView, QFrame, QMessageBox, QApplication, QMenu,
-    QComboBox, QFileDialog, QInputDialog, QButtonGroup
+    QComboBox, QFileDialog, QInputDialog, QButtonGroup, QCheckBox
 )
 from PyQt6.QtGui import QIcon, QFont, QColor, QAction, QKeySequence
 
@@ -651,9 +651,16 @@ class CritMailWindow(FramelessWindow):
         mail_list_layout.setContentsMargins(0, 0, 0, 0)
         mail_list_layout.setSpacing(3)
 
-        # Search & Filter Bar
+        # Search, Select-All Checkbox & Filter Bar
         search_box = QHBoxLayout()
-        search_box.setSpacing(4)
+        search_box.setSpacing(6)
+
+        self.chk_select_all = QCheckBox("☑ All")
+        self.chk_select_all.setToolTip("Check / Uncheck all messages in current view")
+        self.chk_select_all.setStyleSheet(f"color: {COLORS['text_accent']}; font-size: 8pt; font-weight: bold;")
+        self.chk_select_all.toggled.connect(self._on_select_all_toggled)
+        search_box.addWidget(self.chk_select_all)
+
         lbl_search = QLabel("FILTER:")
         lbl_search.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 8pt; font-weight: bold;")
         search_box.addWidget(lbl_search)
@@ -673,10 +680,78 @@ class CritMailWindow(FramelessWindow):
 
         mail_list_layout.addLayout(search_box)
 
-        # Messages Table
+        # Dynamic Bulk Action Bar (Appears when 1+ checkboxes are checked or 2+ rows selected)
+        self.bulk_action_bar = QFrame()
+        self.bulk_action_bar.setStyleSheet(
+            "background: #0d2138; border: 1px solid #00e5ff; padding: 2px 6px;"
+        )
+        self.bulk_action_bar.setVisible(False)
+        bulk_layout = QHBoxLayout(self.bulk_action_bar)
+        bulk_layout.setContentsMargins(4, 2, 4, 2)
+        bulk_layout.setSpacing(4)
+
+        self.lbl_bulk_count = QLabel("☑ 0 SELECTED")
+        self.lbl_bulk_count.setStyleSheet("color: #00e5ff; font-weight: bold; font-size: 8pt;")
+        bulk_layout.addWidget(self.lbl_bulk_count)
+
+        bulk_layout.addStretch()
+
+        btn_bulk_read = QPushButton("✔ Mark Read")
+        btn_bulk_read.setFixedHeight(19)
+        btn_bulk_read.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        btn_bulk_read.clicked.connect(lambda: self._set_selected_read_state(True))
+        bulk_layout.addWidget(btn_bulk_read)
+
+        btn_bulk_unread = QPushButton("● Mark Unread")
+        btn_bulk_unread.setFixedHeight(19)
+        btn_bulk_unread.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        btn_bulk_unread.clicked.connect(lambda: self._set_selected_read_state(False))
+        bulk_layout.addWidget(btn_bulk_unread)
+
+        btn_bulk_arch = QPushButton("📦 Archive")
+        btn_bulk_arch.setFixedHeight(19)
+        btn_bulk_arch.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        btn_bulk_arch.clicked.connect(self._archive_selected_message)
+        bulk_layout.addWidget(btn_bulk_arch)
+
+        btn_bulk_spam = QPushButton("⚠ Spam")
+        btn_bulk_spam.setFixedHeight(19)
+        btn_bulk_spam.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        btn_bulk_spam.clicked.connect(self._spam_selected_message)
+        bulk_layout.addWidget(btn_bulk_spam)
+
+        self.btn_bulk_move = QPushButton("📁 Move To ▾")
+        self.btn_bulk_move.setFixedHeight(19)
+        self.btn_bulk_move.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        self.bulk_move_menu = QMenu(self)
+        self.bulk_move_menu.aboutToShow.connect(self._populate_bulk_move_menu)
+        self.btn_bulk_move.setMenu(self.bulk_move_menu)
+        bulk_layout.addWidget(self.btn_bulk_move)
+
+        btn_bulk_del = QPushButton("✕ Delete")
+        btn_bulk_del.setFixedHeight(19)
+        btn_bulk_del.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        btn_bulk_del.clicked.connect(self._delete_selected_message)
+        bulk_layout.addWidget(btn_bulk_del)
+
+        btn_bulk_burn = QPushButton("🔥 Burn")
+        btn_bulk_burn.setFixedHeight(19)
+        btn_bulk_burn.setStyleSheet("font-size: 7.5pt; padding: 1px 6px; color: #ff3860;")
+        btn_bulk_burn.clicked.connect(self._shred_selected_message)
+        bulk_layout.addWidget(btn_bulk_burn)
+
+        btn_bulk_clear = QPushButton("Clear ☑")
+        btn_bulk_clear.setFixedHeight(19)
+        btn_bulk_clear.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        btn_bulk_clear.clicked.connect(lambda: self._set_all_checkboxes(False))
+        bulk_layout.addWidget(btn_bulk_clear)
+
+        mail_list_layout.addWidget(self.bulk_action_bar)
+
+        # Messages Table (With per-row Checkboxes & Extended Multi-Selection)
         self.table_messages = QTableWidget()
         self.table_messages.setColumnCount(6)
-        self.table_messages.setHorizontalHeaderLabels(["FLAGS", "FROM", "SUBJECT", "CATEGORY", "DATE", "SIZE"])
+        self.table_messages.setHorizontalHeaderLabels(["☑ / FLAGS", "FROM", "SUBJECT", "CATEGORY", "DATE", "SIZE"])
         self.table_messages.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.table_messages.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
         self.table_messages.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
@@ -686,11 +761,12 @@ class CritMailWindow(FramelessWindow):
         self.table_messages.setColumnWidth(1, 195)
         self.table_messages.setColumnWidth(4, 140)
         self.table_messages.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.table_messages.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.table_messages.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.table_messages.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table_messages.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table_messages.customContextMenuRequested.connect(self._show_message_context_menu)
         self.table_messages.itemSelectionChanged.connect(self._on_message_selected)
+        self.table_messages.itemChanged.connect(self._on_message_item_changed)
         self.table_messages.itemDoubleClicked.connect(self._on_message_double_clicked)
         mail_list_layout.addWidget(self.table_messages)
 
@@ -950,7 +1026,15 @@ class CritMailWindow(FramelessWindow):
             self._load_messages_table(search_term=self.txt_search.text().strip())
 
     def _load_messages_table(self, search_term: str = ""):
+        self.table_messages.blockSignals(True)
         self.table_messages.setRowCount(0)
+        self.table_messages.blockSignals(False)
+
+        self.chk_select_all.blockSignals(True)
+        self.chk_select_all.setChecked(False)
+        self.chk_select_all.blockSignals(False)
+        self.bulk_action_bar.setVisible(False)
+
         self.current_message_id = None
         self.browser_body.clear()
         self.lbl_msg_subject.setText("(Select a message to view)")
@@ -967,6 +1051,7 @@ class CritMailWindow(FramelessWindow):
             filter_mode=self.filter_mode,
             category=self.current_category
         )
+        self.table_messages.blockSignals(True)
         self.table_messages.setRowCount(len(messages))
 
         for row, msg in enumerate(messages):
@@ -980,6 +1065,8 @@ class CritMailWindow(FramelessWindow):
             status_text = " ".join(flags) if flags else " "
 
             item_status = QTableWidgetItem(status_text)
+            item_status.setFlags(item_status.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item_status.setCheckState(Qt.CheckState.Unchecked)
             if msg["is_flagged"]:
                 item_status.setForeground(QColor(COLORS["warning_orange"]))
             elif not msg["is_read"]:
@@ -1008,12 +1095,85 @@ class CritMailWindow(FramelessWindow):
             item_size = QTableWidgetItem(size_kb)
             self.table_messages.setItem(row, 5, item_size)
 
+        self.table_messages.blockSignals(False)
         self.lcd_status.setText(f"LOADED // {len(messages)} MESSAGES • CAT: {self.current_category}")
 
         if len(messages) > 0:
             self.table_messages.selectRow(0)
 
+    def _on_select_all_toggled(self, checked: bool):
+        self._set_all_checkboxes(checked)
+
+    def _set_all_checkboxes(self, checked: bool):
+        state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
+        self.table_messages.blockSignals(True)
+        for row in range(self.table_messages.rowCount()):
+            item = self.table_messages.item(row, 0)
+            if item:
+                item.setCheckState(state)
+        self.table_messages.blockSignals(False)
+        self.chk_select_all.blockSignals(True)
+        self.chk_select_all.setChecked(checked)
+        self.chk_select_all.blockSignals(False)
+        self._update_bulk_action_bar()
+
+    def _on_message_item_changed(self, item: QTableWidgetItem):
+        if item.column() == 0:
+            self._update_bulk_action_bar()
+
+    def _get_checked_message_ids(self) -> list[int]:
+        checked_ids = []
+        for row in range(self.table_messages.rowCount()):
+            item = self.table_messages.item(row, 0)
+            if item and item.checkState() == Qt.CheckState.Checked:
+                mid = item.data(Qt.ItemDataRole.UserRole)
+                if mid is not None:
+                    checked_ids.append(int(mid))
+        return checked_ids
+
+    def _get_selected_row_message_ids(self) -> list[int]:
+        rows = sorted({idx.row() for idx in self.table_messages.selectionModel().selectedRows()})
+        ids = []
+        for r in rows:
+            item = self.table_messages.item(r, 0)
+            if item:
+                mid = item.data(Qt.ItemDataRole.UserRole)
+                if mid is not None:
+                    ids.append(int(mid))
+        return ids
+
+    def _get_target_message_ids(self) -> list[int]:
+        """Returns checked message IDs if any checkboxes are checked; otherwise selected rows or current message."""
+        checked = self._get_checked_message_ids()
+        if checked:
+            return checked
+        selected = self._get_selected_row_message_ids()
+        if selected:
+            return selected
+        if self.current_message_id:
+            return [self.current_message_id]
+        return []
+
+    def _update_bulk_action_bar(self):
+        checked_ids = self._get_checked_message_ids()
+        selected_ids = self._get_selected_row_message_ids()
+        total_rows = self.table_messages.rowCount()
+
+        self.chk_select_all.blockSignals(True)
+        self.chk_select_all.setChecked(total_rows > 0 and len(checked_ids) == total_rows)
+        self.chk_select_all.blockSignals(False)
+
+        if len(checked_ids) > 0:
+            self.lbl_bulk_count.setText(f"☑ {len(checked_ids)} CHECKED")
+            self.bulk_action_bar.setVisible(True)
+        elif len(selected_ids) > 1:
+            self.lbl_bulk_count.setText(f"☑ {len(selected_ids)} SELECTED")
+            self.bulk_action_bar.setVisible(True)
+        else:
+            self.bulk_action_bar.setVisible(False)
+
     def _on_message_selected(self):
+        self._update_bulk_action_bar()
         selected = self.table_messages.selectedItems()
         if not selected:
             return
@@ -1271,83 +1431,93 @@ class CritMailWindow(FramelessWindow):
     # Context Menus (Table & Folder)
     # -------------------------------------------------------------------------
     def _show_message_context_menu(self, pos):
-        if not self.current_message_id:
+        target_ids = self._get_target_message_ids()
+        if not target_ids and not self.current_message_id:
             return
-        msg = get_message_full(self.current_message_id)
-        if not msg:
-            return
+        msg = get_message_full(self.current_message_id) if self.current_message_id else None
+        count = len(target_ids)
+        suffix = f" ({count} Checked)" if count > 1 else ""
+
         menu = QMenu(self)
 
-        act_reply = menu.addAction("↩ Reply (Ctrl+R)")
-        act_reply.triggered.connect(self._reply_to_current)
+        if count <= 1 and msg:
+            act_reply = menu.addAction("↩ Reply (Ctrl+R)")
+            act_reply.triggered.connect(self._reply_to_current)
 
-        act_reply_all = menu.addAction("↩↩ Reply All (Ctrl+Shift+R)")
-        act_reply_all.triggered.connect(self._reply_all_to_current)
+            act_reply_all = menu.addAction("↩↩ Reply All (Ctrl+Shift+R)")
+            act_reply_all.triggered.connect(self._reply_all_to_current)
 
-        act_fwd = menu.addAction("↪ Forward (Ctrl+L)")
-        act_fwd.triggered.connect(self._forward_current)
+            act_fwd = menu.addAction("↪ Forward (Ctrl+L)")
+            act_fwd.triggered.connect(self._forward_current)
 
-        if has_classified_cipher(msg.get("body_plain", "")) or has_classified_cipher(msg.get("body_html", "")):
-            act_dec = menu.addAction("🔓 Decrypt Classified Cipher (Ctrl+Shift+D)...")
-            act_dec.triggered.connect(self._decrypt_current_message)
+            if has_classified_cipher(msg.get("body_plain", "")) or has_classified_cipher(msg.get("body_html", "")):
+                act_dec = menu.addAction("🔓 Decrypt Classified Cipher (Ctrl+Shift+D)...")
+                act_dec.triggered.connect(self._decrypt_current_message)
 
-        menu.addSeparator()
+            menu.addSeparator()
 
-        act_star = menu.addAction("★ Toggle Star / Flag")
+        act_read = menu.addAction(f"✔ Mark as Read{suffix}")
+        act_read.triggered.connect(lambda: self._set_selected_read_state(True))
+
+        act_unread = menu.addAction(f"● Mark as Unread{suffix}")
+        act_unread.triggered.connect(lambda: self._set_selected_read_state(False))
+
+        act_star = menu.addAction(f"★ Toggle Star / Flag{suffix}")
         act_star.triggered.connect(self._toggle_flag_current)
 
-        act_arch = menu.addAction("📦 Archive Message (Ctrl+E)")
+        act_arch = menu.addAction(f"📦 Archive{suffix} (Ctrl+E)")
         act_arch.triggered.connect(self._archive_selected_message)
 
-        act_spam = menu.addAction("⚠ Mark as Spam / Quarantine (Ctrl+J)")
+        act_spam = menu.addAction(f"⚠ Mark as Spam / Quarantine{suffix} (Ctrl+J)")
         act_spam.triggered.connect(self._spam_selected_message)
 
         # Categorize
-        cat_m = menu.addMenu("🏷 Assign Category")
+        cat_m = menu.addMenu(f"🏷 Assign Category{suffix}")
         for c in ["Primary", "Social", "Updates", "Promotions", "Forums"]:
             cat_m.addAction(c).triggered.connect(lambda checked=False, cat=c: self._set_current_message_category(cat))
 
         # Move to folder
-        move_m = menu.addMenu("📁 Move to Folder")
+        move_m = menu.addMenu(f"📁 Move to Folder{suffix}")
         if self.current_account_id:
             for f in get_folders_for_account(self.current_account_id):
                 if f["id"] != self.current_folder_id:
                     fid = f["id"]
                     move_m.addAction(f["name"]).triggered.connect(lambda checked=False, target_id=fid: self._move_current_to_folder(target_id))
 
+        if count <= 1 and msg:
+            menu.addSeparator()
+
+            unsub = parse_unsubscribe_json(msg.get("unsubscribe_info", ""))
+            if unsub.get("has_unsubscribe"):
+                act_un = menu.addAction("⚡ 1-Click Unsubscribe from List...")
+                act_un.triggered.connect(self._execute_unsubscribe)
+
+            act_contact = menu.addAction("📇 Add Sender to Contacts...")
+            act_contact.triggered.connect(self._add_current_sender_to_contacts)
+
+            act_block = menu.addAction("🚫 Block Sender (Add to Blacklist)...")
+            act_block.triggered.connect(self._block_current_sender)
+
+            menu.addSeparator()
+
+            act_print = menu.addAction("🖨 Print Message... (Ctrl+P)")
+            act_print.triggered.connect(self._print_current_message)
+
+            act_pdf = menu.addAction("📄 Export as PDF...")
+            act_pdf.triggered.connect(self._export_current_pdf)
+
+            act_exp = menu.addAction("💾 Export as .eml / .txt...")
+            act_exp.triggered.connect(self._export_selected_message)
+
+            act_hdr = menu.addAction("🔍 View Raw Headers & Source")
+            act_hdr.triggered.connect(self._view_raw_headers)
+
         menu.addSeparator()
 
-        unsub = parse_unsubscribe_json(msg.get("unsubscribe_info", ""))
-        if unsub.get("has_unsubscribe"):
-            act_un = menu.addAction("⚡ 1-Click Unsubscribe from List...")
-            act_un.triggered.connect(self._execute_unsubscribe)
-
-        act_contact = menu.addAction("📇 Add Sender to Contacts...")
-        act_contact.triggered.connect(self._add_current_sender_to_contacts)
-
-        act_block = menu.addAction("🚫 Block Sender (Add to Blacklist)...")
-        act_block.triggered.connect(self._block_current_sender)
-
-        menu.addSeparator()
-
-        act_print = menu.addAction("🖨 Print Message... (Ctrl+P)")
-        act_print.triggered.connect(self._print_current_message)
-
-        act_pdf = menu.addAction("📄 Export as PDF...")
-        act_pdf.triggered.connect(self._export_current_pdf)
-
-        act_exp = menu.addAction("💾 Export as .eml / .txt...")
-        act_exp.triggered.connect(self._export_selected_message)
-
-        act_hdr = menu.addAction("🔍 View Raw Headers & Source")
-        act_hdr.triggered.connect(self._view_raw_headers)
-
-        menu.addSeparator()
-
-        act_del = menu.addAction("✕ Delete Message (Del)")
+        act_del = menu.addAction(f"✕ Delete{suffix} (Del)")
         act_del.triggered.connect(self._delete_selected_message)
 
-        act_burn = menu.addAction("🔥 Burn / Shred Permanently (Shift+Del)")
+        act_burn = menu.addAction(f"🔥 Burn / Shred Permanently{suffix} (Shift+Del)")
         act_burn.triggered.connect(self._shred_selected_message)
 
         menu.exec(self.table_messages.viewport().mapToGlobal(pos))
@@ -1408,50 +1578,71 @@ class CritMailWindow(FramelessWindow):
             export_message_as_pdf(self, msg)
 
     # -------------------------------------------------------------------------
-    # Message Actions & Categories
+    # Message Actions & Categories (Single + Bulk Multi-Select Support)
     # -------------------------------------------------------------------------
     def _set_current_message_category(self, category: str):
-        if not self.current_message_id:
+        target_ids = self._get_target_message_ids()
+        if not target_ids:
             return
-        set_message_category(self.current_message_id, category)
-        self.status_bar.setText(f"Message categorized as [{category}].")
+        for mid in target_ids:
+            set_message_category(mid, category)
+        label = f"{len(target_ids)} messages" if len(target_ids) > 1 else "Message"
+        self.status_bar.setText(f"{label} categorized as [{category}].")
         self._load_messages_table(search_term=self.txt_search.text().strip())
 
     def _toggle_flag_current(self):
-        if not self.current_message_id:
+        target_ids = self._get_target_message_ids()
+        if not target_ids:
             return
-        flagged = toggle_message_flag(self.current_message_id)
-        self.status_bar.setText("Message starred ★" if flagged else "Message star removed.")
+        flagged = False
+        for mid in target_ids:
+            flagged = toggle_message_flag(mid)
+        if len(target_ids) > 1:
+            self.status_bar.setText(f"Toggled ★ star on {len(target_ids)} messages.")
+        else:
+            self.status_bar.setText("Message starred ★" if flagged else "Message star removed.")
         self._load_messages_table(search_term=self.txt_search.text().strip())
 
     def _archive_selected_message(self):
-        if not self.current_message_id:
+        target_ids = self._get_target_message_ids()
+        if not target_ids:
             return
-        archive_message(self.current_message_id)
-        self.status_bar.setText("📦 Message moved to Archive.")
+        for mid in target_ids:
+            archive_message(mid)
+        label = f"{len(target_ids)} messages" if len(target_ids) > 1 else "Message"
+        self.status_bar.setText(f"📦 {label} moved to Archive.")
         self._refresh_accounts_and_folders()
 
     def _spam_selected_message(self):
-        if not self.current_message_id:
+        target_ids = self._get_target_message_ids()
+        if not target_ids:
             return
-        mark_message_spam(self.current_message_id)
-        self.status_bar.setText("⚠ Message quarantined in Spam folder.")
+        for mid in target_ids:
+            mark_message_spam(mid)
+        label = f"{len(target_ids)} messages" if len(target_ids) > 1 else "Message"
+        self.status_bar.setText(f"⚠ {label} quarantined in Spam folder.")
         self._refresh_accounts_and_folders()
 
     def _shred_selected_message(self):
-        if not self.current_message_id:
+        target_ids = self._get_target_message_ids()
+        if not target_ids:
             return
+        count = len(target_ids)
+        target_desc = f"these {count} selected messages" if count > 1 else "this message"
         res = QMessageBox.warning(
             self,
             "🔥 Burn / Cryptographic Shred",
-            "WARNING: This will overwrite cached attachments with random bytes, redact database fields, and permanently destroy this message.\n\nProceed with Burn protocol?",
+            f"WARNING: This will overwrite cached attachments with random bytes, redact database fields, and permanently destroy {target_desc}.\n\nProceed with Burn protocol?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if res != QMessageBox.StandardButton.Yes:
             return
-        shred_message(self.current_message_id)
-        self.current_message_id = None
-        self.status_bar.setText("🔥 Message and attachments cryptographically shredded.")
+        for mid in target_ids:
+            shred_message(mid)
+        if self.current_message_id in target_ids:
+            self.current_message_id = None
+        label = f"{count} messages" if count > 1 else "Message"
+        self.status_bar.setText(f"🔥 {label} and attachments cryptographically shredded.")
         self._refresh_accounts_and_folders()
 
     def _populate_move_menu(self):
@@ -1465,17 +1656,36 @@ class CritMailWindow(FramelessWindow):
                     lambda checked=False, target_id=fid: self._move_current_to_folder(target_id)
                 )
 
-    def _move_current_to_folder(self, target_folder_id: int):
-        if not self.current_message_id:
+    def _populate_bulk_move_menu(self):
+        self.bulk_move_menu.clear()
+        if not self.current_account_id:
             return
-        move_message_to_folder(self.current_message_id, target_folder_id)
-        self.status_bar.setText("Message moved to folder.")
+        for f in get_folders_for_account(self.current_account_id):
+            if f["id"] != self.current_folder_id:
+                fid = f["id"]
+                self.bulk_move_menu.addAction(f["name"]).triggered.connect(
+                    lambda checked=False, target_id=fid: self._move_current_to_folder(target_id)
+                )
+
+    def _move_current_to_folder(self, target_folder_id: int):
+        target_ids = self._get_target_message_ids()
+        if not target_ids:
+            return
+        for mid in target_ids:
+            move_message_to_folder(mid, target_folder_id)
+        label = f"{len(target_ids)} messages" if len(target_ids) > 1 else "Message"
+        self.status_bar.setText(f"📁 {label} moved to folder.")
         self._refresh_accounts_and_folders()
 
     def _set_selected_read_state(self, is_read: bool):
-        if not self.current_message_id:
+        target_ids = self._get_target_message_ids()
+        if not target_ids:
             return
-        mark_message_read(self.current_message_id, is_read)
+        for mid in target_ids:
+            mark_message_read(mid, is_read)
+        label = f"{len(target_ids)} messages" if len(target_ids) > 1 else "Message"
+        state_str = "read" if is_read else "unread"
+        self.status_bar.setText(f"Marked {label.lower()} as {state_str}.")
         self._refresh_accounts_and_folders()
 
     def _mark_all_read(self):
@@ -1628,25 +1838,32 @@ class CritMailWindow(FramelessWindow):
         self.status_bar.setText(f"Imported {Path(file_path).name}")
 
     def _delete_selected_message(self):
-        if not self.current_message_id:
+        target_ids = self._get_target_message_ids()
+        if not target_ids:
             return
+        count = len(target_ids)
+        target_desc = f"these {count} selected messages" if count > 1 else "this message"
         prompt_text = (
-            "Permanently delete this message from Trash?"
+            f"Permanently delete {target_desc} from Trash?"
             if self.current_folder_type == "trash"
-            else "Move this message to Trash?"
+            else f"Move {target_desc} to Trash?"
         )
         if get_setting("confirm_delete", "1") == "1":
             res = QMessageBox.question(
                 self,
-                "Delete Message",
+                "Delete Message(s)",
                 prompt_text,
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if res != QMessageBox.StandardButton.Yes:
                 return
 
-        delete_message(self.current_message_id)
-        self.current_message_id = None
+        for mid in target_ids:
+            delete_message(mid)
+        if self.current_message_id in target_ids:
+            self.current_message_id = None
+        label = f"{count} messages" if count > 1 else "Message"
+        self.status_bar.setText(f"✕ {label} deleted.")
         self._refresh_accounts_and_folders()
 
     # -------------------------------------------------------------------------

@@ -416,18 +416,18 @@ QCheckBox {{
     spacing: 5px;
 }}
 
-QCheckBox::indicator {{
+QCheckBox::indicator, QTableWidget::indicator {{
     width: 12px;
     height: 12px;
     border: 1px solid #1e385c;
     background: #090e17;
 }}
 
-QCheckBox::indicator:hover {{
+QCheckBox::indicator:hover, QTableWidget::indicator:hover {{
     border: 1px solid {COLORS['border_active']};
 }}
 
-QCheckBox::indicator:checked {{
+QCheckBox::indicator:checked, QTableWidget::indicator:checked {{
     background: {COLORS['border_active']};
     border: 1px solid #ffffff;
 }}
