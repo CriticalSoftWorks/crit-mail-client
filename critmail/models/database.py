@@ -145,6 +145,12 @@ def init_db():
 
 def _upgrade_schema(conn: sqlite3.Connection):
     """Safely adds newly required columns to existing databases without data loss."""
+    acc_cols = [r["name"] for r in conn.execute("PRAGMA table_info(accounts)").fetchall()]
+    if "signature" not in acc_cols:
+        conn.execute("ALTER TABLE accounts ADD COLUMN signature TEXT DEFAULT ''")
+    if "keep_on_server" not in acc_cols:
+        conn.execute("ALTER TABLE accounts ADD COLUMN keep_on_server INTEGER NOT NULL DEFAULT 1")
+
     msg_cols = [r["name"] for r in conn.execute("PRAGMA table_info(messages)").fetchall()]
     if "category" not in msg_cols:
         conn.execute("ALTER TABLE messages ADD COLUMN category TEXT DEFAULT 'Primary'")

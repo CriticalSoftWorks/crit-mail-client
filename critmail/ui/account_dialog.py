@@ -244,9 +244,14 @@ class AccountDialog(QDialog):
         self.btn_delete.setEnabled(True)
         self.txt_name.setText(acc.get("name", ""))
         self.txt_email.setText(acc.get("email_address", ""))
-        self.combo_proto.setCurrentText(acc.get("account_type", "IMAP").upper())
+        proto = acc.get("account_type", "IMAP").upper()
+        self.combo_proto.blockSignals(True)
+        self.combo_proto.setCurrentText(proto)
+        self.combo_proto.blockSignals(False)
         self.txt_in_host.setText(acc.get("incoming_host", ""))
-        self.txt_in_port.setText(str(acc.get("incoming_port", 993)))
+        default_port = 993 if proto == "IMAP" else 995
+        raw_port = acc.get("incoming_port", default_port)
+        self.txt_in_port.setText(str(raw_port))
         self.combo_in_sec.setCurrentText(acc.get("incoming_security", "SSL/TLS"))
         in_u = acc.get("incoming_username", "")
         in_p = acc.get("incoming_password", "")
@@ -277,9 +282,10 @@ class AccountDialog(QDialog):
             self.accept()
 
     def _on_proto_changed(self, proto_text: str):
-        if proto_text == "IMAP" and self.txt_in_port.text() == "995":
+        cur_port = self.txt_in_port.text().strip()
+        if proto_text == "IMAP" and cur_port in ("995", "110", ""):
             self.txt_in_port.setText("993")
-        elif proto_text == "POP3" and self.txt_in_port.text() == "993":
+        elif proto_text == "POP3" and cur_port in ("993", "143", ""):
             self.txt_in_port.setText("995")
 
     def _toggle_smtp_creds(self, state):
@@ -298,11 +304,18 @@ class AccountDialog(QDialog):
             smtp_user = self.txt_smtp_user.text().strip()
             smtp_pass = self.txt_smtp_pass.text()
 
-        default_in_port = 993 if self.combo_proto.currentText() == "IMAP" else 995
+        proto = self.combo_proto.currentText().upper()
+        default_in_port = 993 if proto == "IMAP" else 995
         try:
             in_port = int(self.txt_in_port.text().strip() or str(default_in_port))
         except ValueError:
             in_port = default_in_port
+
+        # Auto-correct mismatched standard SSL ports when switching between POP3 and IMAP
+        if proto == "IMAP" and in_port == 995:
+            in_port = 993
+        elif proto == "POP3" and in_port == 993:
+            in_port = 995
 
         try:
             smtp_port = int(self.txt_smtp_port.text().strip() or "465")
@@ -313,7 +326,7 @@ class AccountDialog(QDialog):
             "id": self.current_account_id or 0,
             "name": self.txt_name.text().strip() or "Mail Account",
             "email_address": email_addr,
-            "account_type": self.combo_proto.currentText(),
+            "account_type": proto,
             "incoming_host": self.txt_in_host.text().strip(),
             "incoming_port": in_port,
             "incoming_security": self.combo_in_sec.currentText(),
@@ -360,39 +373,42 @@ class AccountDialog(QDialog):
             QMessageBox.warning(self, "Missing Fields", "Please provide email address, incoming host, and SMTP host.")
             return
 
-        if self.current_account_id is not None:
-            update_account(
-                account_id=self.current_account_id,
-                name=acc["name"],
-                email_address=acc["email_address"],
-                account_type=acc["account_type"],
-                incoming_host=acc["incoming_host"],
-                incoming_port=acc["incoming_port"],
-                incoming_security=acc["incoming_security"],
-                incoming_username=acc["incoming_username"],
-                incoming_password=acc["incoming_password"],
-                smtp_host=acc["smtp_host"],
-                smtp_port=acc["smtp_port"],
-                smtp_security=acc["smtp_security"],
-                smtp_username=acc["smtp_username"],
-                smtp_password=acc["smtp_password"],
-                keep_on_server=acc["keep_on_server"]
-            )
-        else:
-            add_account(
-                name=acc["name"],
-                email_address=acc["email_address"],
-                account_type=acc["account_type"],
-                incoming_host=acc["incoming_host"],
-                incoming_port=acc["incoming_port"],
-                incoming_security=acc["incoming_security"],
-                incoming_username=acc["incoming_username"],
-                incoming_password=acc["incoming_password"],
-                smtp_host=acc["smtp_host"],
-                smtp_port=acc["smtp_port"],
-                smtp_security=acc["smtp_security"],
-                smtp_username=acc["smtp_username"],
-                smtp_password=acc["smtp_password"],
-                keep_on_server=acc["keep_on_server"]
-            )
-        self.accept()
+        try:
+            if self.current_account_id is not None:
+                update_account(
+                    account_id=self.current_account_id,
+                    name=acc["name"],
+                    email_address=acc["email_address"],
+                    account_type=acc["account_type"],
+                    incoming_host=acc["incoming_host"],
+                    incoming_port=acc["incoming_port"],
+                    incoming_security=acc["incoming_security"],
+                    incoming_username=acc["incoming_username"],
+                    incoming_password=acc["incoming_password"],
+                    smtp_host=acc["smtp_host"],
+                    smtp_port=acc["smtp_port"],
+                    smtp_security=acc["smtp_security"],
+                    smtp_username=acc["smtp_username"],
+                    smtp_password=acc["smtp_password"],
+                    keep_on_server=acc["keep_on_server"]
+                )
+            else:
+                add_account(
+                    name=acc["name"],
+                    email_address=acc["email_address"],
+                    account_type=acc["account_type"],
+                    incoming_host=acc["incoming_host"],
+                    incoming_port=acc["incoming_port"],
+                    incoming_security=acc["incoming_security"],
+                    incoming_username=acc["incoming_username"],
+                    incoming_password=acc["incoming_password"],
+                    smtp_host=acc["smtp_host"],
+                    smtp_port=acc["smtp_port"],
+                    smtp_security=acc["smtp_security"],
+                    smtp_username=acc["smtp_username"],
+                    smtp_password=acc["smtp_password"],
+                    keep_on_server=acc["keep_on_server"]
+                )
+            self.accept()
+        except Exception as e:
+            QMessageBox.critical(self, "Save Account Error", f"Failed to save account configuration:\n{e}")

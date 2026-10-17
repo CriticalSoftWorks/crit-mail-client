@@ -364,9 +364,9 @@ class CommsReconDialog(QDialog):
                 lines.append("  [OK] SPF TXT RECORD FOUND.")
             else:
                 lines.append(f"  [WARNING] NO SPF TXT RECORD FOUND FOR '{domain}'!")
-                lines.append("       -> Outgoing mail to Gmail/Yahoo may be rejected or sent to Spam.")
+                lines.append("       -> Outgoing mail to Gmail/Yahoo will be rejected (550-5.7.26) without SPF!")
                 lines.append("          Add this TXT record in your domain DNS dashboard:")
-                lines.append(f"          • Type: TXT | Host: @ | Value: v=spf1 a mx ip4:{mail_host_ip} ~all")
+                lines.append(f"          • Type: TXT | Host: @ | Value: v=spf1 a mx ip4:{mail_host_ip} include:spf.postal.businessidentity.llc ~all")
         except Exception:
             pass
 

@@ -22,7 +22,8 @@ class ImapEngine:
     def __init__(self, account: dict):
         self.account = account
         self.host = account["incoming_host"]
-        self.port = int(account["incoming_port"])
+        raw_port = int(account["incoming_port"])
+        self.port = 993 if raw_port == 995 else raw_port
         self.security = account["incoming_security"]
         self.username = account["incoming_username"]
         self.password = account["incoming_password"]
