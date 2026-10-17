@@ -184,6 +184,356 @@ FOIA_DOSSIERS = [
     }
 ]
 
+ACADEMY_COURSES = [
+    {
+        "id": "acad-101",
+        "code": "ACAD-101",
+        "division": "DIVISION 01 // NETWORK & COMMS ENGINEERING",
+        "title": "Network Protocols, DNS Authentication & Email Security Engineering",
+        "credential_title": "Certified SIGINT Communications Specialist (CSCS)",
+        "ceu_credits": "3.0 CEU Credits (NIST NICE: Protect & Defend)",
+        "xp": 750,
+        "summary": (
+            "Master the real-world internet protocols that power global email and secure communications: "
+            "SMTP, IMAP4, implicit TLS 1.3 (RFC 8314), and the cryptographic DNS authentication triad (SPF, RSA-2048 DKIM, and DMARC)."
+        ),
+        "modules": [
+            {
+                "title": "Module 1.1: The Anatomy of Internet Mail (SMTP, IMAP4 & Implicit TLS 1.3)",
+                "content": (
+                    "Every email crosses multiple network boundaries. Legacy plaintext ports (25, 110, 143) are vulnerable to passive "
+                    "wiretapping and STARTTLS downgrade attacks (STRIPTLS). Modern RFC 8314 mandates Implicit TLS from the very first byte: "
+                    "Port 465 for SMTP Submission and Port 993 for IMAP4 mailbox synchronization."
+                ),
+                "code_sample": (
+                    "# Verify Implicit TLS 1.3 Handshake on Port 465\n"
+                    "openssl s_client -connect email-smtp.us-east-1.amazonaws.com:465 -tls1_3"
+                )
+            },
+            {
+                "title": "Module 1.2: Cryptographic DNS Triad (SPF, RSA-2048 DKIM & DMARC)",
+                "content": (
+                    "1. SPF (Sender Policy Framework): Publishes authorized outbound IPv4/IPv6 ranges in a DNS TXT record (v=spf1).\n"
+                    "2. DKIM (DomainKeys Identified Mail): Signs the message headers and body hash with the sender's private RSA-2048 key; "
+                    "receiving servers verify the signature via the public key at <selector>._domainkey.<domain>.\n"
+                    "3. DMARC (Domain-based Message Authentication, Reporting, and Conformance): Enforces alignment and instructs receivers "
+                    "to 'quarantine' or 'reject' unauthenticated messages."
+                ),
+                "code_sample": (
+                    "_dmarc.theintelligenceagency.net. IN TXT \"v=DMARC1; p=quarantine; rua=mailto:postmaster@theintelligenceagency.net\""
+                )
+            },
+            {
+                "title": "Module 1.3: SMTP Header Forensics & Detecting Relay Spoofing",
+                "content": (
+                    "Because the display 'From:' header can be forged by any sender, forensic analysts read 'Received:' headers from TOP to BOTTOM "
+                    "(most recent hop at the top) and verify the 'Authentication-Results:' header produced by their own trusted MX server."
+                ),
+                "code_sample": (
+                    "Authentication-Results: mx.google.com;\n"
+                    "  dkim=pass header.i=@theintelligenceagency.net header.s=ses;\n"
+                    "  spf=pass (google.com: domain of bounce.theintelligenceagency.net designates 54.240.8.1 as permitted sender)"
+                )
+            }
+        ],
+        "exam": [
+            {
+                "q_id": "q1",
+                "question": "1. Which DNS authentication standard cryptographically signs outbound email headers and body hashes using an asymmetric public/private keypair?",
+                "options": [
+                    {"value": "SPF", "label": "SPF (Sender Policy Framework)"},
+                    {"value": "DKIM", "label": "DKIM (DomainKeys Identified Mail)"},
+                    {"value": "PTR", "label": "Reverse PTR DNS Record"},
+                    {"value": "STARTTLS", "label": "Opportunistic STARTTLS"}
+                ],
+                "answer": "DKIM"
+            },
+            {
+                "q_id": "q2",
+                "question": "2. According to RFC 8314, which port is designated for Implicit TLS/SSL outbound SMTP message submission?",
+                "options": [
+                    {"value": "25", "label": "Port 25 (Plaintext Relay)"},
+                    {"value": "110", "label": "Port 110 (POP3)"},
+                    {"value": "465", "label": "Port 465 (Implicit TLS Submission)"},
+                    {"value": "8080", "label": "Port 8080 (HTTP Proxy)"}
+                ],
+                "answer": "465"
+            },
+            {
+                "q_id": "q3",
+                "question": "3. When inspecting raw email headers for spoofing, which header chain is added hop-by-hop from bottom (earliest) to top (most recent)?",
+                "options": [
+                    {"value": "RECEIVED", "label": "Received: headers"},
+                    {"value": "REPLY-TO", "label": "Reply-To: headers"},
+                    {"value": "SUBJECT", "label": "Subject: headers"},
+                    {"value": "X-MAILER", "label": "X-Mailer: headers"}
+                ],
+                "answer": "RECEIVED"
+            }
+        ]
+    },
+    {
+        "id": "acad-201",
+        "code": "ACAD-201",
+        "division": "DIVISION 02 // APPLIED CRYPTOGRAPHY & PYTHON",
+        "title": "Applied Cryptography, Key Derivation & Python Security Automation",
+        "credential_title": "Certified Cryptographic Python Analyst (CCPA)",
+        "ceu_credits": "4.0 CEU Credits (NIST NICE: Design & Development)",
+        "xp": 1000,
+        "summary": (
+            "Learn how modern authenticated encryption (AES-256-GCM), password key stretching (PBKDF2-HMAC-SHA256), "
+            "constant-time HMAC verification, and Python cryptographic scripting protect classified payloads."
+        ),
+        "modules": [
+            {
+                "title": "Module 2.1: Authenticated Encryption with Associated Data (AES-256-GCM)",
+                "content": (
+                    "Unauthenticated block modes like AES-ECB or raw AES-CBC are vulnerable to pattern leakage and padding oracle attacks. "
+                    "AES-256-GCM (Galois/Counter Mode) combines a 256-bit key, a unique 96-bit (12-byte) Nonce/IV, and a 128-bit Authentication Tag "
+                    "that guarantees both confidentiality and tamper-proof integrity."
+                ),
+                "code_sample": (
+                    "from cryptography.hazmat.primitives.ciphers.aead import AESGCM\n"
+                    "import os\n"
+                    "nonce = os.urandom(12)  # 96-bit unique nonce\n"
+                    "ciphertext = AESGCM(key_32_bytes).encrypt(nonce, b'TOP SECRET PAYLOAD', None)"
+                )
+            },
+            {
+                "title": "Module 2.2: Password Key Stretching (PBKDF2-HMAC-SHA256 & Random Salts)",
+                "content": (
+                    "Human passphrases do not have 256 bits of uniform entropy. To derive an AES-256 key or store a password hash safely, "
+                    "we combine a unique 16-byte cryptographic salt (which defeats precomputed Rainbow Tables) with 150,000+ iterations "
+                    "of PBKDF2-HMAC-SHA256 to slow down GPU brute-force attacks."
+                ),
+                "code_sample": (
+                    "import hashlib, secrets\n"
+                    "salt = secrets.token_bytes(16)\n"
+                    "derived_key = hashlib.pbkdf2_hmac('sha256', passphrase.encode(), salt, 200_000)"
+                )
+            },
+            {
+                "title": "Module 2.3: Timing Side-Channels & Python's 'secrets' and 'hmac' Modules",
+                "content": (
+                    "Never use Python's standard 'random' module (Mersenne Twister) for security tokens—its state can be predicted after observing "
+                    "624 outputs. Always use 'secrets' (OS CSPRNG) and compare hashes with 'hmac.compare_digest()' to prevent timing attacks."
+                ),
+                "code_sample": (
+                    "import hmac, secrets\n"
+                    "token = secrets.token_urlsafe(32)\n"
+                    "is_valid = hmac.compare_digest(user_mac, expected_mac)"
+                )
+            }
+        ],
+        "exam": [
+            {
+                "q_id": "q1",
+                "question": "1. What critical security property does AES-256-GCM provide in addition to confidentiality via its 128-bit GCM Tag?",
+                "options": [
+                    {"value": "COMPRESSION", "label": "Lossless payload compression"},
+                    {"value": "INTEGRITY", "label": "Authenticated integrity / tamper detection"},
+                    {"value": "DNS_ROUTING", "label": "Automatic MX DNS routing"},
+                    {"value": "KEY_ESCROW", "label": "Third-party key escrow"}
+                ],
+                "answer": "INTEGRITY"
+            },
+            {
+                "q_id": "q2",
+                "question": "2. Which Python standard library module is backed by the OS CSPRNG and must be used instead of 'random' for security tokens?",
+                "options": [
+                    {"value": "MATH", "label": "math"},
+                    {"value": "SECRETS", "label": "secrets"},
+                    {"value": "ITERTOOLS", "label": "itertools"},
+                    {"value": "PICKLE", "label": "pickle"}
+                ],
+                "answer": "SECRETS"
+            },
+            {
+                "q_id": "q3",
+                "question": "3. What is the primary role of a unique 16-byte random salt in PBKDF2-HMAC-SHA256?",
+                "options": [
+                    {"value": "RAINBOW", "label": "Defeats precomputed Rainbow Table lookups and identical hash collisions"},
+                    {"value": "SHORTEN", "label": "Shortens the output hash to 8 bits"},
+                    {"value": "PLAIN", "label": "Allows the server to recover the plaintext password"},
+                    {"value": "COMPRESS", "label": "Compresses large attachments"}
+                ],
+                "answer": "RAINBOW"
+            }
+        ]
+    },
+    {
+        "id": "acad-301",
+        "code": "ACAD-301",
+        "division": "DIVISION 03 // SOC THREAT HUNTING & COUNTER-INTEL",
+        "title": "SOC Threat Hunting, Counter-Phishing & OSINT Reconnaissance",
+        "credential_title": "Cyber Counter-Intelligence Operator (CCIO)",
+        "ceu_credits": "3.5 CEU Credits (NIST NICE: Analyze & Investigate)",
+        "xp": 900,
+        "summary": (
+            "Neutralize tracking beacons, dissect IDN Punycode homograph attacks, analyze malicious payloads without executing scripts, "
+            "and execute structured NIST SP 800-61 incident response workflows."
+        ),
+        "modules": [
+            {
+                "title": "Module 3.1: Zero-Click Tracking Pixels & Telemetry Neutralization",
+                "content": (
+                    "Marketing trackers and spear-phishing campaigns embed invisible 1x1 remote images (<img src='https://tracker.example/open?id=992'>). "
+                    "When a standard mail client auto-loads remote images, it leaks your public IP address, geolocation, OS/User-Agent, and exact read timestamp. "
+                    "CritMail intercepts and strips remote image loads by default."
+                ),
+                "code_sample": (
+                    "# Blocked by CritMail Tracker Shield:\n"
+                    "<img src=\"https://telemetry.hostile.example/pixel.gif?uid=target\" width=\"1\" height=\"1\" />"
+                )
+            },
+            {
+                "title": "Module 3.2: IDN Homograph Attacks (Punycode 'xn--') & Link Guard",
+                "content": (
+                    "Attackers register Internationalized Domain Names (IDNs) using Cyrillic or Greek characters that look identical to Latin letters "
+                    "(e.g., Cyrillic 'а' U+0430 instead of Latin 'a' U+0061). Under the hood, DNS encodes these domains using the ASCII Punycode prefix 'xn--'."
+                ),
+                "code_sample": (
+                    "Visual Display : https://аpple.com/login (Cyrillic 'а')\n"
+                    "Actual DNS Name: https://xn--pple-43d.com/login"
+                )
+            },
+            {
+                "title": "Module 3.3: NIST SP 800-61 Incident Response Lifecycle",
+                "content": (
+                    "Professional Security Operations Centers (SOCs) follow four structured phases under NIST SP 800-61:\n"
+                    "1. Preparation -> 2. Detection & Analysis -> 3. Containment, Eradication & Recovery -> 4. Post-Incident Activity."
+                ),
+                "code_sample": (
+                    "Phase 1: Preparation\n"
+                    "Phase 2: Detection & Analysis\n"
+                    "Phase 3: Containment, Eradication & Recovery\n"
+                    "Phase 4: Post-Incident Activity (Lessons Learned)"
+                )
+            }
+        ],
+        "exam": [
+            {
+                "q_id": "q1",
+                "question": "1. What ASCII prefix identifies an Internationalized Domain Name (Punycode) often abused in homograph phishing attacks?",
+                "options": [
+                    {"value": "XN--", "label": "xn--"},
+                    {"value": "TLS--", "label": "tls--"},
+                    {"value": "UTF8--", "label": "utf8--"},
+                    {"value": "DNS--", "label": "dns--"}
+                ],
+                "answer": "XN--"
+            },
+            {
+                "q_id": "q2",
+                "question": "2. How does an embedded 1x1 tracking pixel reveal a recipient's IP address and read time when an HTML email is opened?",
+                "options": [
+                    {"value": "HTTP_REQ", "label": "The client makes an outbound HTTP/HTTPS GET request to fetch the remote image URL"},
+                    {"value": "BLUETOOTH", "label": "It scans local Bluetooth devices"},
+                    {"value": "BIOS", "label": "It modifies the system BIOS"},
+                    {"value": "ICMP", "label": "It sends an ICMP ping flood"}
+                ],
+                "answer": "HTTP_REQ"
+            },
+            {
+                "q_id": "q3",
+                "question": "3. In the NIST SP 800-61 Incident Response lifecycle, which phase immediately follows 'Detection & Analysis'?",
+                "options": [
+                    {"value": "CONTAINMENT", "label": "Containment, Eradication & Recovery"},
+                    {"value": "MARKETING", "label": "Public Marketing Disclosure"},
+                    {"value": "DELETION", "label": "Hard Drive Formatting"},
+                    {"value": "PROCUREMENT", "label": "Vendor Procurement"}
+                ],
+                "answer": "CONTAINMENT"
+            }
+        ]
+    },
+    {
+        "id": "acad-401",
+        "code": "ACAD-401",
+        "division": "DIVISION 04 // SECURE INFRASTRUCTURE & SYSTEMS",
+        "title": "Linux Hardening, SQL Injection Defense & Zero-Trust API Engineering",
+        "credential_title": "Directorate Security & Infrastructure Engineer (DSIE)",
+        "ceu_credits": "4.5 CEU Credits (NIST NICE: Operate & Maintain)",
+        "xp": 1200,
+        "summary": (
+            "Build and harden production Linux servers, eliminate SQL Injection via parameterized queries, "
+            "lock down SSH keys, and enforce HTTP Strict-Transport-Security (HSTS)."
+        ),
+        "modules": [
+            {
+                "title": "Module 4.1: Eliminating SQL Injection (SQLi) with Parameterized Queries",
+                "content": (
+                    "Formatting user input directly into SQL strings via f-strings or concatenation allows attackers to inject \"' OR 1=1 --\" "
+                    "and dump or destroy tables. Parameterized queries (?) separate the SQL command structure from the literal data parameters."
+                ),
+                "code_sample": (
+                    "# VULNERABLE (Never do this):\n"
+                    "# cursor.execute(f\"SELECT * FROM agents WHERE callsign = '{user_input}'\")\n\n"
+                    "# SECURE (Parameterized Query):\n"
+                    "cursor.execute(\"SELECT * FROM agents WHERE callsign = ?\", (user_input,))"
+                )
+            },
+            {
+                "title": "Module 4.2: Linux SSH Key Permissions & Least-Privilege Services",
+                "content": (
+                    "OpenSSH refuses to use private key files (.pem / id_ed25519) if other system users can read them. "
+                    "Setting 'chmod 400' (r--------) ensures only the file owner has read access. Production daemons should run under dedicated "
+                    "non-root systemd accounts."
+                ),
+                "code_sample": (
+                    "chmod 400 ~/.ssh/id_ed25519\n"
+                    "ssh -i ~/.ssh/id_ed25519 operative@184.193.61.45"
+                )
+            },
+            {
+                "title": "Module 4.3: Transport Layer Hardening & HSTS",
+                "content": (
+                    "Even when a server supports HTTPS on Port 443, a user typing a domain name without 'https://' initially makes a plaintext HTTP request. "
+                    "The 'Strict-Transport-Security' (HSTS) header instructs browsers to automatically upgrade all future connections to HTTPS."
+                ),
+                "code_sample": (
+                    "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload"
+                )
+            }
+        ],
+        "exam": [
+            {
+                "q_id": "q1",
+                "question": "1. What is the primary defense against SQL Injection (SQLi) when executing database queries in Python?",
+                "options": [
+                    {"value": "PARAMETERIZED", "label": "Parameterized queries (bound placeholders '?')"},
+                    {"value": "BASE64", "label": "Base64 encoding the SQL string"},
+                    {"value": "UPPERCASE", "label": "Converting all inputs to uppercase"},
+                    {"value": "REGEX", "label": "Removing spaces with regex"}
+                ],
+                "answer": "PARAMETERIZED"
+            },
+            {
+                "q_id": "q2",
+                "question": "2. Which Linux octal permission mode restricts an SSH private key file to read-only for its owner and no permissions for group/others?",
+                "options": [
+                    {"value": "777", "label": "chmod 777 (rwxrwxrwx)"},
+                    {"value": "666", "label": "chmod 666 (rw-rw-rw-)"},
+                    {"value": "400", "label": "chmod 400 (r--------)"},
+                    {"value": "755", "label": "chmod 755 (rwxr-xr-x)"}
+                ],
+                "answer": "400"
+            },
+            {
+                "q_id": "q3",
+                "question": "3. Which HTTP security response header instructs browsers to strictly connect to a domain only over HTTPS?",
+                "options": [
+                    {"value": "HSTS", "label": "Strict-Transport-Security (HSTS)"},
+                    {"value": "ACCEPT", "label": "Accept-Encoding"},
+                    {"value": "USER_AGENT", "label": "User-Agent"},
+                    {"value": "CACHE", "label": "Cache-Control"}
+                ],
+                "answer": "HSTS"
+            }
+        ]
+    }
+]
+
 
 def get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -207,6 +557,8 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 
 def rank_for_xp(xp: int) -> str:
+    if xp >= 2500:
+        return "DIRECTORATE FELLOW // LEVEL 5"
     if xp >= 1200:
         return "STATION CHIEF // LEVEL 5"
     if xp >= 700:
@@ -219,6 +571,14 @@ def rank_for_xp(xp: int) -> str:
 def generate_license_key() -> str:
     parts = [secrets.token_hex(2).upper() for _ in range(3)]
     return f"CRIT-L5-{parts[0]}-{parts[1]}-{parts[2]}"
+
+
+def generate_certificate_id(course_code: str, callsign: str) -> tuple[str, str]:
+    token = secrets.token_hex(3).upper()
+    cert_id = f"TIA-CERT-2026-{course_code.replace('ACAD-', '')}-{token}"
+    sig_input = f"{cert_id}:{callsign}:{course_code}:{DOMAIN}".encode("utf-8")
+    signature = hashlib.sha256(sig_input).hexdigest()[:32].upper()
+    return cert_id, signature
 
 
 def init_portal_db():
@@ -264,6 +624,35 @@ def init_portal_db():
             UNIQUE(agent_callsign, mission_id)
         )
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS issued_certificates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cert_id TEXT UNIQUE NOT NULL,
+            agent_callsign TEXT NOT NULL,
+            agent_name TEXT NOT NULL,
+            agent_email TEXT NOT NULL,
+            course_id TEXT NOT NULL,
+            course_code TEXT NOT NULL,
+            course_title TEXT NOT NULL,
+            credential_title TEXT NOT NULL,
+            ceu_credits TEXT NOT NULL,
+            score_pct INTEGER DEFAULT 100,
+            sha256_signature TEXT NOT NULL,
+            issued_at TEXT NOT NULL,
+            UNIQUE(agent_callsign, course_id)
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS instructor_applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            credentials TEXT NOT NULL,
+            proposed_topic TEXT NOT NULL,
+            background TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
 
     # Seed Director / Primary Account (james.f@theintelligenceagency.net)
     existing = c.execute("SELECT id FROM agents WHERE callsign = ?", ("james.f",)).fetchone()
@@ -288,6 +677,30 @@ def init_portal_db():
             now_str
         ))
         _seed_welcome_transmissions(c, "james.f", f"james.f@{DOMAIN}", "CRIT-L5-DIRECTOR-0001")
+
+    # Seed a sample verifiable Founder Certificate for james.f so verification works out of the box
+    existing_cert = c.execute("SELECT id FROM issued_certificates WHERE cert_id = ?", ("TIA-CERT-2026-DIRECTOR-0001",)).fetchone()
+    if not existing_cert:
+        c.execute("""
+            INSERT OR IGNORE INTO issued_certificates (
+                cert_id, agent_callsign, agent_name, agent_email,
+                course_id, course_code, course_title, credential_title,
+                ceu_credits, score_pct, sha256_signature, issued_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            "TIA-CERT-2026-DIRECTOR-0001",
+            "james.f",
+            "Director James F.",
+            f"james.f@{DOMAIN}",
+            "acad-101",
+            "ACAD-101",
+            "Network Protocols, DNS Authentication & Email Security Engineering",
+            "Certified SIGINT Communications Specialist (CSCS)",
+            "3.0 CEU Credits (NIST NICE: Protect & Defend)",
+            100,
+            hashlib.sha256(b"TIA-CERT-2026-DIRECTOR-0001:james.f:ACAD-101").hexdigest()[:32].upper(),
+            now_str
+        ))
 
     conn.commit()
     conn.close()
@@ -472,6 +885,36 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 "reason": f"AVAILABLE // {callsign}@{DOMAIN} is ready for immediate assignment."
             })
 
+        if path == "/api/academy/courses":
+            courses_out = []
+            for c_item in ACADEMY_COURSES:
+                c_copy = dict(c_item)
+                c_copy["exam"] = [
+                    {"q_id": q["q_id"], "question": q["question"], "options": q["options"]}
+                    for q in c_item["exam"]
+                ]
+                courses_out.append(c_copy)
+            return self._send_json(200, {"courses": courses_out})
+
+        if path == "/api/certificates/verify":
+            cert_id = (qs.get("cert_id", [""])[0] or "").strip().upper()
+            if not cert_id:
+                return self._send_json(400, {"valid": False, "error": "Please provide a Certificate ID (e.g. TIA-CERT-2026-DIRECTOR-0001)."})
+            conn = get_db()
+            row = conn.execute("SELECT * FROM issued_certificates WHERE UPPER(cert_id) = ?", (cert_id,)).fetchone()
+            conn.close()
+            if not row:
+                return self._send_json(404, {
+                    "valid": False,
+                    "cert_id": cert_id,
+                    "error": f"Certificate '{cert_id}' was not found in the Directorate Academy Registry."
+                })
+            cert = dict(row)
+            return self._send_json(200, {
+                "valid": True,
+                "certificate": cert
+            })
+
         if path == "/api/agent/dashboard":
             agent = self._get_authenticated_agent()
             if not agent:
@@ -494,6 +937,13 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 (agent["callsign"],)
             ).fetchall()
             solved_ids = {r["mission_id"] for r in solved_rows}
+
+            cert_rows = conn.execute(
+                "SELECT * FROM issued_certificates WHERE agent_callsign = ? ORDER BY id DESC",
+                (agent["callsign"],)
+            ).fetchall()
+            certificates = [dict(r) for r in cert_rows]
+            cert_by_course = {c["course_id"]: c for c in certificates}
             conn.close()
 
             missions_out = []
@@ -502,6 +952,18 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 m_copy.pop("solution", None)
                 m_copy["completed"] = m["id"] in solved_ids
                 missions_out.append(m_copy)
+
+            courses_out = []
+            for c_item in ACADEMY_COURSES:
+                c_copy = dict(c_item)
+                c_copy["exam"] = [
+                    {"q_id": q["q_id"], "question": q["question"], "options": q["options"]}
+                    for q in c_item["exam"]
+                ]
+                earned = cert_by_course.get(c_item["id"])
+                c_copy["completed"] = earned is not None
+                c_copy["certificate"] = earned
+                courses_out.append(c_copy)
 
             return self._send_json(200, {
                 "agent": {
@@ -514,7 +976,7 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                     "xp": agent["xp"],
                     "plan_tier": agent["plan_tier"],
                     "created_at": agent["created_at"],
-                    "imap_host": f"mailserver.businessidentity.llc",
+                    "imap_host": "mailserver.businessidentity.llc",
                     "imap_port": 993,
                     "smtp_host": SES_SMTP_HOST,
                     "smtp_port": 465
@@ -522,7 +984,9 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 "inbox": inbox,
                 "sent": sent,
                 "missions": missions_out,
-                "foia_dossiers": FOIA_DOSSIERS
+                "foia_dossiers": FOIA_DOSSIERS,
+                "academy_courses": courses_out,
+                "certificates": certificates
             })
 
         return super().do_GET()
@@ -795,6 +1259,172 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 "rank": new_rank,
                 "xp_gained": target_mission["xp"],
                 "message": f"VERIFIED! +{target_mission['xp']} XP awarded. Rank: {new_rank}"
+            })
+
+        if path == "/api/academy/exam":
+            agent = self._get_authenticated_agent()
+            if not agent:
+                return self._send_json(401, {"error": "Unauthorized."})
+            course_id = (body.get("course_id") or body.get("code") or "").strip()
+            answers = body.get("answers") or {}
+
+            course = next(
+                (c for c in ACADEMY_COURSES if c["id"].lower() == course_id.lower() or c["code"].lower() == course_id.lower()),
+                None
+            )
+            if not course:
+                return self._send_json(404, {"error": "Academy course not found."})
+
+            total_q = len(course["exam"])
+            correct_q = 0
+            for q in course["exam"]:
+                submitted = str(answers.get(q["q_id"], "")).strip().upper()
+                if submitted == q["answer"].upper():
+                    correct_q += 1
+
+            score_pct = int(round((correct_q / total_q) * 100)) if total_q else 100
+            if correct_q < total_q:
+                return self._send_json(200, {
+                    "passed": False,
+                    "score_pct": score_pct,
+                    "correct_count": correct_q,
+                    "total_count": total_q,
+                    "message": f"EXAM SCORE: {correct_q}/{total_q} ({score_pct}%). 100% required for Directorate Certification. Review the course modules and try again!"
+                })
+
+            conn = get_db()
+            c = conn.cursor()
+            existing_cert = c.execute(
+                "SELECT * FROM issued_certificates WHERE agent_callsign = ? AND course_id = ?",
+                (agent["callsign"], course["id"])
+            ).fetchone()
+            if existing_cert:
+                cert_dict = dict(existing_cert)
+                conn.close()
+                return self._send_json(200, {
+                    "passed": True,
+                    "already_certified": True,
+                    "score_pct": 100,
+                    "xp": agent["xp"],
+                    "rank": agent["rank"],
+                    "certificate": cert_dict,
+                    "message": f"Already certified! Certificate ID: {cert_dict['cert_id']}"
+                })
+
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            cert_id, sig = generate_certificate_id(course["code"], agent["callsign"])
+            c.execute("""
+                INSERT INTO issued_certificates (
+                    cert_id, agent_callsign, agent_name, agent_email,
+                    course_id, course_code, course_title, credential_title,
+                    ceu_credits, score_pct, sha256_signature, issued_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                cert_id,
+                agent["callsign"],
+                agent["display_name"],
+                agent["email_address"],
+                course["id"],
+                course["code"],
+                course["title"],
+                course["credential_title"],
+                course["ceu_credits"],
+                100,
+                sig,
+                now_str
+            ))
+
+            new_xp = int(agent["xp"]) + int(course["xp"])
+            new_rank = rank_for_xp(new_xp)
+            c.execute(
+                "UPDATE agents SET xp = ?, rank = ? WHERE callsign = ?",
+                (new_xp, new_rank, agent["callsign"])
+            )
+            c.execute("""
+                INSERT INTO transmissions (
+                    agent_callsign, folder, sender, recipient, subject, body, classification, is_read, created_at
+                ) VALUES (?, 'inbox', ?, ?, ?, ?, 'ACADEMY DIPLOMA // VERIFIED CREDENTIAL', 0, ?)
+            """, (
+                agent["callsign"],
+                f"Directorate Training Academy <academy@{DOMAIN}>",
+                agent["email_address"],
+                f"[CERTIFICATION ISSUED] {course['credential_title']} — {cert_id}",
+                (
+                    f"OFFICIAL DIRECTORATE CREDENTIAL ISSUED\n"
+                    f"==================================================\n"
+                    f"Certificate ID    : {cert_id}\n"
+                    f"Operative         : {agent['display_name']} ({agent['email_address']})\n"
+                    f"Credential Earned : {course['credential_title']}\n"
+                    f"Course Completed  : {course['code']} — {course['title']}\n"
+                    f"Continuing Ed     : {course['ceu_credits']}\n"
+                    f"SHA-256 Signature : {sig}\n"
+                    f"Public Verify URL : https://{DOMAIN}/?verify={cert_id}\n"
+                    f"==================================================\n\n"
+                    f"Congratulations! You have earned +{course['xp']} XP (New Rank: {new_rank})."
+                ),
+                now_str
+            ))
+            conn.commit()
+            cert_row = c.execute("SELECT * FROM issued_certificates WHERE cert_id = ?", (cert_id,)).fetchone()
+            conn.close()
+
+            return self._send_json(200, {
+                "passed": True,
+                "score_pct": 100,
+                "xp": new_xp,
+                "rank": new_rank,
+                "xp_gained": course["xp"],
+                "certificate": dict(cert_row),
+                "message": f"🎓 CERTIFICATION EARNED! Credential '{course['credential_title']}' ({cert_id}) issued (+{course['xp']} XP)!"
+            })
+
+        if path == "/api/academy/instructor-apply":
+            full_name = (body.get("full_name") or "").strip()
+            email = (body.get("email") or "").strip()
+            credentials = (body.get("credentials") or "").strip()
+            proposed_topic = (body.get("proposed_topic") or "").strip()
+            background = (body.get("background") or "").strip()
+
+            if not full_name or not email or "@" not in email or not credentials:
+                return self._send_json(400, {"error": "Please provide your name, email address, and professional credentials."})
+
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            conn = get_db()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO instructor_applications (
+                    full_name, email, credentials, proposed_topic, background, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, (full_name, email, credentials, proposed_topic, background, now_str))
+
+            # Deliver directly into Director james.f's HQ Inbox
+            c.execute("""
+                INSERT INTO transmissions (
+                    agent_callsign, folder, sender, recipient, subject, body, classification, is_read, created_at
+                ) VALUES ('james.f', 'inbox', ?, ?, ?, ?, 'ADVISORY BOARD // INSTRUCTOR APPLICATION', 0, ?)
+            """, (
+                f"{full_name} <{email}>",
+                f"james.f@{DOMAIN}",
+                f"[ACADEMY INSTRUCTOR APPLICATION] {full_name} ({credentials})",
+                (
+                    f"NEW MISSION-FIRST ACADEMY INSTRUCTOR / ADVISORY APPLICATION\n"
+                    f"============================================================\n"
+                    f"Applicant Name : {full_name}\n"
+                    f"Contact Email  : {email}\n"
+                    f"Credentials    : {credentials}\n"
+                    f"Proposed Track : {proposed_topic}\n"
+                    f"Submitted At   : {now_str}\n"
+                    f"------------------------------------------------------------\n"
+                    f"Background & Mission Statement:\n{background}\n"
+                ),
+                now_str
+            ))
+            conn.commit()
+            conn.close()
+
+            return self._send_json(200, {
+                "ok": True,
+                "message": "Application logged with the Directorate Advisory Board! Director James F. will review your credentials."
             })
 
         return self._send_json(404, {"error": "Unknown API endpoint."})

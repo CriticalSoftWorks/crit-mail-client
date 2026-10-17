@@ -348,8 +348,201 @@ async function loadAgentDashboard() {
       `;
       foiaContainer.appendChild(card);
     });
+
+    // Render Earned Certificates & Academy Courses
+    renderAcademySection(data.academy_courses || [], data.certificates || []);
   } catch (err) {
     console.error("Dashboard load error:", err);
+  }
+}
+
+function renderAcademySection(courses, certificates) {
+  const certsContainer = document.getElementById("hq-certificates-container");
+  const coursesContainer = document.getElementById("hq-academy-courses-container");
+  if (!certsContainer || !coursesContainer) return;
+
+  certsContainer.innerHTML = "";
+  if (certificates.length > 0) {
+    const heading = document.createElement("h4");
+    heading.style.cssText = "color:var(--accent-amber); margin-bottom:0.6rem; font-size:0.88rem;";
+    heading.textContent = `🏅 YOUR EARNED DIRECTORATE CERTIFICATIONS (${certificates.length})`;
+    certsContainer.appendChild(heading);
+
+    certificates.forEach((cert) => {
+      const dip = document.createElement("div");
+      dip.className = "cert-diploma-card";
+      dip.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem;">
+          <div>
+            <div style="color:var(--accent-amber); font-size:0.75rem; font-weight:700;">OFFICIAL DIRECTORATE DIPLOMA // VERIFIED CREDENTIAL</div>
+            <h3 style="color:#ffffff; font-size:1.05rem; margin:0.25rem 0;">🎓 ${escapeHtml(cert.credential_title)}</h3>
+            <div style="color:var(--text-accent); font-size:0.82rem;">Awarded to: <strong>${escapeHtml(cert.agent_name)}</strong> (<code>${escapeHtml(cert.agent_email)}</code>)</div>
+          </div>
+          <span class="status-pill" style="margin:0; border-color:var(--accent-green); color:var(--accent-green);">SCORE: ${cert.score_pct}% // VERIFIED</span>
+        </div>
+        <div style="margin-top:0.65rem; font-size:0.77rem; color:var(--text-secondary); line-height:1.5;">
+          <div><strong>Course Completed:</strong> [${escapeHtml(cert.course_code)}] ${escapeHtml(cert.course_title)}</div>
+          <div><strong>Continuing Education:</strong> ${escapeHtml(cert.ceu_credits)} &bull; <strong>Issued:</strong> ${escapeHtml(cert.issued_at)}</div>
+          <div><strong>Certificate ID:</strong> <code style="color:var(--accent-amber); font-weight:700;">${escapeHtml(cert.cert_id)}</code> &bull; <strong>SHA-256 Sig:</strong> <code>${escapeHtml(cert.sha256_signature)}</code></div>
+        </div>
+      `;
+      certsContainer.appendChild(dip);
+    });
+  }
+
+  coursesContainer.innerHTML = "";
+  courses.forEach((c, idx) => {
+    const details = document.createElement("details");
+    details.className = "academy-disclosure";
+    details.setAttribute("name", "hq-academy-accordion");
+    if (idx === 0) details.open = true;
+
+    const badgeHtml = c.completed
+      ? `<span style="color:var(--accent-green); font-size:0.78rem;">✔ CERTIFIED (${escapeHtml(c.certificate?.cert_id || "EARNED")})</span>`
+      : `<span style="color:var(--accent-amber); font-size:0.78rem;">+${c.xp} XP &bull; ${escapeHtml(c.ceu_credits.split("(")[0].trim())} ▾</span>`;
+
+    const modulesHtml = (c.modules || [])
+      .map(
+        (m) => `
+        <div class="module-block">
+          <div style="color:var(--text-accent); font-weight:700; font-size:0.86rem; margin-bottom:0.35rem;">${escapeHtml(m.title)}</div>
+          <p style="color:var(--text-primary); font-size:0.81rem; margin-bottom:0.45rem; white-space:pre-line;">${escapeHtml(m.content)}</p>
+          <div class="cipher-box" style="margin:0.35rem 0 0 0; font-size:0.78rem;">${escapeHtml(m.code_sample)}</div>
+        </div>
+      `
+      )
+      .join("");
+
+    let examSectionHtml = "";
+    if (c.completed && c.certificate) {
+      examSectionHtml = `
+        <div style="margin-top:1rem; padding:0.85rem; background:#071914; border:1px solid var(--accent-green); color:var(--accent-green); font-size:0.83rem;">
+          ✔ <strong>CERTIFICATION COMPLETE:</strong> You have earned <strong>${escapeHtml(c.credential_title)}</strong> (Certificate ID: <code>${escapeHtml(c.certificate.cert_id)}</code>).
+        </div>
+      `;
+    } else {
+      const questionsHtml = (c.exam || [])
+        .map(
+          (q) => `
+          <div class="exam-question-card">
+            <div style="color:#ffffff; font-weight:700; font-size:0.84rem; margin-bottom:0.45rem;">${escapeHtml(q.question)}</div>
+            ${q.options
+              .map(
+                (opt) => `
+              <label class="exam-option-label">
+                <input type="radio" name="exam-${escapeHtml(c.id)}-${escapeHtml(q.q_id)}" value="${escapeHtml(opt.value)}" />
+                <span>${escapeHtml(opt.label)}</span>
+              </label>
+            `
+              )
+              .join("")}
+          </div>
+        `
+        )
+        .join("");
+
+      examSectionHtml = `
+        <div style="margin-top:1.1rem; border-top:1px solid #1b3659; padding-top:0.9rem;">
+          <h4 style="color:var(--accent-amber); font-size:0.9rem; margin-bottom:0.55rem;">📝 HANDS-ON CERTIFICATION EXAM // ${escapeHtml(c.credential_title)}</h4>
+          ${questionsHtml}
+          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.65rem; margin-top:0.65rem;">
+            <button type="button" class="btn btn-green" onclick="submitAcademyExam('${escapeHtml(c.id)}')">🎓 Submit Exam &amp; Issue Certificate (+${c.xp} XP)</button>
+            <span id="exam-status-${escapeHtml(c.id)}" style="font-size:0.82rem;"></span>
+          </div>
+        </div>
+      `;
+    }
+
+    details.innerHTML = `
+      <summary>
+        <span>[${escapeHtml(c.code)}] ${escapeHtml(c.title)}</span>
+        ${badgeHtml}
+      </summary>
+      <div class="academy-disclosure-body">
+        <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.65rem;">
+          ${escapeHtml(c.division)} &bull; <strong>Credential:</strong> <span style="color:var(--accent-amber);">${escapeHtml(c.credential_title)}</span> &bull; ${escapeHtml(c.ceu_credits)}
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.82rem; margin-top:0.35rem;">${escapeHtml(c.summary)}</p>
+        ${modulesHtml}
+        ${examSectionHtml}
+      </div>
+    `;
+    coursesContainer.appendChild(details);
+  });
+}
+
+async function submitAcademyExam(courseId) {
+  const statusEl = document.getElementById(`exam-status-${courseId}`);
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!statusEl || !token) return;
+
+  const answers = {};
+  ["q1", "q2", "q3"].forEach((qid) => {
+    const checked = document.querySelector(`input[name="exam-${courseId}-${qid}"]:checked`);
+    if (checked) answers[qid] = checked.value;
+  });
+
+  if (Object.keys(answers).length < 3) {
+    statusEl.style.color = "var(--accent-amber)";
+    statusEl.textContent = "Please select an answer for all 3 exam questions before submitting.";
+    return;
+  }
+
+  statusEl.style.color = "var(--text-accent)";
+  statusEl.textContent = "Grading examination & signing credential...";
+
+  const res = await fetch("/api/academy/exam", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ course_id: courseId, answers })
+  });
+  const data = await res.json();
+  if (data.passed) {
+    statusEl.style.color = "var(--accent-green)";
+    statusEl.textContent = data.message;
+    setTimeout(() => loadAgentDashboard(), 900);
+  } else {
+    statusEl.style.color = "var(--accent-red)";
+    statusEl.textContent = data.message || "Exam failed. Review the modules and try again.";
+  }
+}
+window.submitAcademyExam = submitAcademyExam;
+
+async function verifyCertificateId() {
+  const input = document.getElementById("input-verify-cert");
+  const out = document.getElementById("cert-verify-output");
+  if (!input || !out) return;
+  const certId = input.value.trim().toUpperCase();
+  if (!certId) {
+    out.style.color = "var(--accent-amber)";
+    out.textContent = "Please enter a TIA-CERT-... Certificate ID to verify.";
+    return;
+  }
+  out.style.color = "var(--text-accent)";
+  out.textContent = "Querying Directorate Academy Cryptographic Registry...";
+  try {
+    const res = await fetch(`/api/certificates/verify?cert_id=${encodeURIComponent(certId)}`);
+    const data = await res.json();
+    if (res.ok && data.valid && data.certificate) {
+      const c = data.certificate;
+      out.style.color = "var(--accent-green)";
+      out.innerHTML = `
+        ✔ <strong>AUTHENTICATED CREDENTIAL:</strong> <code>${escapeHtml(c.cert_id)}</code><br/>
+        <strong>Recipient:</strong> ${escapeHtml(c.agent_name)} (<code>${escapeHtml(c.agent_email)}</code>) &bull;
+        <strong>Credential:</strong> <span style="color:var(--accent-amber);">${escapeHtml(c.credential_title)}</span><br/>
+        <strong>Course:</strong> [${escapeHtml(c.course_code)}] ${escapeHtml(c.course_title)} (${escapeHtml(c.ceu_credits)})<br/>
+        <strong>Issued:</strong> ${escapeHtml(c.issued_at)} &bull; <strong>SHA-256 Signature:</strong> <code>${escapeHtml(c.sha256_signature)}</code>
+      `;
+    } else {
+      out.style.color = "var(--accent-red)";
+      out.textContent = `✖ ${data.error || "Certificate ID not found."}`;
+    }
+  } catch (err) {
+    out.style.color = "var(--accent-red)";
+    out.textContent = "Network error querying verification registry.";
   }
 }
 
@@ -414,6 +607,60 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Enter") {
       e.preventDefault();
       checkCallsignAvailability();
+    }
+  });
+
+  document.getElementById("btn-verify-cert")?.addEventListener("click", verifyCertificateId);
+  document.getElementById("input-verify-cert")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      verifyCertificateId();
+    }
+  });
+
+  // Auto-verify if ?verify=TIA-CERT-... is in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("verify")) {
+    const certInput = document.getElementById("input-verify-cert");
+    if (certInput) {
+      certInput.value = urlParams.get("verify");
+      verifyCertificateId();
+    }
+  }
+
+  document.getElementById("btn-open-instructor-modal")?.addEventListener("click", () => {
+    document.getElementById("dlg-instructor")?.showModal();
+  });
+
+  document.getElementById("form-instructor")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const statusEl = document.getElementById("inst-status");
+    statusEl.style.color = "var(--text-accent)";
+    statusEl.textContent = "Transmitting credentials to Directorate Command...";
+    const payload = {
+      full_name: document.getElementById("inst-name").value,
+      email: document.getElementById("inst-email").value,
+      credentials: document.getElementById("inst-creds").value,
+      proposed_topic: document.getElementById("inst-topic").value,
+      background: document.getElementById("inst-bio").value
+    };
+    const res = await fetch("/api/academy/instructor-apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok) {
+      statusEl.style.color = "var(--accent-green)";
+      statusEl.textContent = `✔ ${data.message}`;
+      document.getElementById("form-instructor").reset();
+      setTimeout(() => {
+        document.getElementById("dlg-instructor")?.close();
+        statusEl.textContent = "";
+      }, 1500);
+    } else {
+      statusEl.style.color = "var(--accent-red)";
+      statusEl.textContent = `✖ ${data.error || "Submission failed."}`;
     }
   });
 
@@ -544,3 +791,4 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => (btn.textContent = "📋 Copy License Key"), 1800);
   });
 });
+
