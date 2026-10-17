@@ -507,34 +507,33 @@ class CritMailWindow(FramelessWindow):
         main_layout.setContentsMargins(4, 2, 4, 4)
         main_layout.setSpacing(4)
 
-        # 1. Action Toolbar & Winamp 3 LED/LCD Readout Pane
+        # 1. Top Global Header Bar (Gmail-Style Search Bar + Sync + Status Readout)
         top_bar = QFrame()
         top_bar.setObjectName("ToolbarFrame")
         top_layout = QHBoxLayout(top_bar)
-        top_layout.setContentsMargins(4, 3, 4, 3)
-        top_layout.setSpacing(4)
+        top_layout.setContentsMargins(6, 4, 6, 4)
+        top_layout.setSpacing(6)
 
-        self.btn_compose = QPushButton("⚡ COMPOSE")
-        self.btn_compose.setObjectName("AccentBtn")
-        self.btn_compose.setToolTip("Compose a new secure email (Ctrl+N)")
-        self.btn_compose.clicked.connect(self._open_compose)
-        top_layout.addWidget(self.btn_compose)
-
-        self.btn_get_mail = QPushButton("⟳ GET MAIL")
+        self.btn_get_mail = QPushButton("⟳ Sync Mail")
         self.btn_get_mail.setObjectName("AccentBtn")
         self.btn_get_mail.setToolTip("Synchronize mail from server (F5)")
         self.btn_get_mail.clicked.connect(self._fetch_mail)
         top_layout.addWidget(self.btn_get_mail)
 
-        self.btn_contacts = QPushButton("📇 DOSSIERS")
-        self.btn_contacts.setToolTip("Open Agent Dossiers & Contacts Directory (Ctrl+B)")
-        self.btn_contacts.clicked.connect(lambda: self._open_contacts(False))
-        top_layout.addWidget(self.btn_contacts)
+        # Centered Gmail-Style Search & Filter Bar
+        self.txt_search = QLineEdit()
+        self.txt_search.setPlaceholderText("🔍 Search mail, sender, subject, or content... (Ctrl+F)")
+        self.txt_search.setMinimumWidth(280)
+        self.txt_search.textChanged.connect(self._on_search_changed)
+        top_layout.addWidget(self.txt_search, 1)
 
-        self.btn_accounts = QPushButton("✉ ACCOUNTS")
-        self.btn_accounts.setToolTip("Configure IMAP / POP3 / SMTP Accounts")
-        self.btn_accounts.clicked.connect(self._open_accounts)
-        top_layout.addWidget(self.btn_accounts)
+        self.combo_filter = QComboBox()
+        self.combo_filter.addItem("Filter: All Mail", "ALL")
+        self.combo_filter.addItem("Filter: Unread Only", "UNREAD")
+        self.combo_filter.addItem("Filter: ★ Starred", "FLAGGED")
+        self.combo_filter.addItem("Filter: 📎 Attachments", "ATTACHMENTS")
+        self.combo_filter.currentIndexChanged.connect(self._on_filter_mode_changed)
+        top_layout.addWidget(self.combo_filter)
 
         self.btn_safe_mode = QPushButton("🛡 SAFE MODE: HTML")
         self.btn_safe_mode.setToolTip("Switch between Sanitized HTML and Plain Text (Ctrl+M)")
@@ -545,11 +544,6 @@ class CritMailWindow(FramelessWindow):
         self.btn_stealth.setToolTip("Redact emails, IPs, and phone numbers on screen (Ctrl+Shift+X)")
         self.btn_stealth.clicked.connect(self._toggle_stealth_redact)
         top_layout.addWidget(self.btn_stealth)
-
-        self.btn_security = QPushButton("🔒 SECURITY")
-        self.btn_security.setToolTip("Security, Blacklist & Mail Forwarding Settings")
-        self.btn_security.clicked.connect(lambda: self._open_security_dialog(0))
-        top_layout.addWidget(self.btn_security)
 
         self.btn_recon = QPushButton("📡 RECON")
         self.btn_recon.setToolTip("Live DNS (MX/SPF) & Mail Server TLS Diagnostics")
@@ -562,13 +556,6 @@ class CritMailWindow(FramelessWindow):
         self.btn_pro.clicked.connect(self._open_clearance_pro)
         top_layout.addWidget(self.btn_pro)
 
-        self.btn_delete = QPushButton("✕ DELETE")
-        self.btn_delete.setToolTip("Move selected message to Trash / Delete (Del)")
-        self.btn_delete.clicked.connect(self._delete_selected_message)
-        top_layout.addWidget(self.btn_delete)
-
-        top_layout.addStretch()
-
         # Winamp 3 LED/LCD Readout Display
         self.lcd_status = QLabel("DEFCON 5 // TLS 1.3 ACTIVE • SIGINT IDLE")
         self.lcd_status.setObjectName("LcdReadout")
@@ -576,50 +563,28 @@ class CritMailWindow(FramelessWindow):
 
         main_layout.addWidget(top_bar)
 
-        # 2. Category Selector Bar (Primary, Social, Updates, Promotions, Forums)
-        cat_bar = QFrame()
-        cat_bar.setStyleSheet("background: #090e17; border-bottom: 1px solid #14243b; padding: 1px 4px;")
-        cat_layout = QHBoxLayout(cat_bar)
-        cat_layout.setContentsMargins(4, 2, 4, 2)
-        cat_layout.setSpacing(4)
-
-        lbl_cat = QLabel("CHANNEL:")
-        lbl_cat.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 7.5pt; font-weight: bold;")
-        cat_layout.addWidget(lbl_cat)
-
-        self.cat_group = QButtonGroup(self)
-        self.cat_btns = {}
-        for cat_name in ["ALL", "Primary", "Social", "Updates", "Promotions", "Forums"]:
-            btn = QPushButton(f"[{cat_name.upper()}]")
-            btn.setCheckable(True)
-            btn.setStyleSheet("font-size: 7.5pt; padding: 2px 7px; min-height: 14px;")
-            if cat_name == "ALL":
-                btn.setChecked(True)
-            btn.clicked.connect(lambda checked=False, c=cat_name: self._set_category_filter(c))
-            self.cat_group.addButton(btn)
-            self.cat_btns[cat_name] = btn
-            cat_layout.addWidget(btn)
-
-        cat_layout.addStretch()
-
-        lbl_clearance = QLabel("CLEARANCE: FIELD AGENT // ENCRYPTION: DPAPI+AES256")
-        lbl_clearance.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 7.5pt;")
-        cat_layout.addWidget(lbl_clearance)
-
-        main_layout.addWidget(cat_bar)
-
-        # 3. Main 3-Pane Splitter (Folders | Messages List | Reader Pane)
+        # 2. Main 3-Pane Splitter (Left Sidebar | Right Top Inbox + Right Bottom Reader)
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
         self.main_splitter.setHandleWidth(2)
 
-        # Left Pane: Account / Folder Tree + Quick Actions
+        # Left Sidebar: Gmail-Style Prominent "+ COMPOSE" Button + Folders Tree + Quick Nav
         self.left_widget = QWidget()
         left_layout = QVBoxLayout(self.left_widget)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(3)
+        left_layout.setContentsMargins(0, 2, 0, 0)
+        left_layout.setSpacing(4)
+
+        self.btn_compose = QPushButton("✎  + COMPOSE MESSAGE")
+        self.btn_compose.setObjectName("AccentBtn")
+        self.btn_compose.setFixedHeight(30)
+        self.btn_compose.setStyleSheet(
+            "font-size: 9pt; font-weight: bold; letter-spacing: 0.8px; border: 1px solid #00e5ff;"
+        )
+        self.btn_compose.setToolTip("Compose a new secure email (Ctrl+N)")
+        self.btn_compose.clicked.connect(self._open_compose)
+        left_layout.addWidget(self.btn_compose)
 
         self.tree_folders = QTreeWidget()
-        self.tree_folders.setHeaderLabel("ACCOUNTS & CHANNELS")
+        self.tree_folders.setHeaderLabel("MAILBOXES & FOLDERS")
         self.tree_folders.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree_folders.customContextMenuRequested.connect(self._show_folder_context_menu)
         self.tree_folders.itemClicked.connect(self._on_folder_selected)
@@ -638,6 +603,27 @@ class CritMailWindow(FramelessWindow):
         folder_btn_row.addWidget(btn_empty_tr)
         left_layout.addLayout(folder_btn_row)
 
+        nav_btn_row = QHBoxLayout()
+        nav_btn_row.setSpacing(3)
+        self.btn_contacts = QPushButton("📇 Contacts")
+        self.btn_contacts.setToolTip("Open Agent Dossiers & Contacts Directory (Ctrl+B)")
+        self.btn_contacts.setStyleSheet("font-size: 7.5pt; padding: 2px 4px;")
+        self.btn_contacts.clicked.connect(lambda: self._open_contacts(False))
+        nav_btn_row.addWidget(self.btn_contacts)
+
+        self.btn_accounts = QPushButton("⚙ Accounts")
+        self.btn_accounts.setToolTip("Configure IMAP / POP3 / SMTP Accounts")
+        self.btn_accounts.setStyleSheet("font-size: 7.5pt; padding: 2px 4px;")
+        self.btn_accounts.clicked.connect(self._open_accounts)
+        nav_btn_row.addWidget(self.btn_accounts)
+
+        self.btn_security = QPushButton("🔒 Security")
+        self.btn_security.setToolTip("Security, Blacklist & Mail Forwarding Settings")
+        self.btn_security.setStyleSheet("font-size: 7.5pt; padding: 2px 4px;")
+        self.btn_security.clicked.connect(lambda: self._open_security_dialog(0))
+        nav_btn_row.addWidget(self.btn_security)
+        left_layout.addLayout(nav_btn_row)
+
         self.left_widget.setFixedWidth(245)
         self.main_splitter.addWidget(self.left_widget)
 
@@ -645,110 +631,124 @@ class CritMailWindow(FramelessWindow):
         self.right_splitter = QSplitter(Qt.Orientation.Vertical)
         self.right_splitter.setHandleWidth(2)
 
-        # Right Top: Search bar, Filter buttons & Mail List Table
+        # Right Top: Gmail-Style Action Bar + Category Tabs + Mail List Table
         mail_list_widget = QWidget()
         mail_list_layout = QVBoxLayout(mail_list_widget)
         mail_list_layout.setContentsMargins(0, 0, 0, 0)
-        mail_list_layout.setSpacing(3)
+        mail_list_layout.setSpacing(2)
 
-        # Search, Select-All Checkbox & Filter Bar
-        search_box = QHBoxLayout()
-        search_box.setSpacing(6)
-
-        self.chk_select_all = QCheckBox("☑ All")
-        self.chk_select_all.setToolTip("Check / Uncheck all messages in current view")
-        self.chk_select_all.setStyleSheet(f"color: {COLORS['text_accent']}; font-size: 8pt; font-weight: bold;")
-        self.chk_select_all.toggled.connect(self._on_select_all_toggled)
-        search_box.addWidget(self.chk_select_all)
-
-        lbl_search = QLabel("FILTER:")
-        lbl_search.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 8pt; font-weight: bold;")
-        search_box.addWidget(lbl_search)
-
-        self.txt_search = QLineEdit()
-        self.txt_search.setPlaceholderText("Search sender, subject, recipient, content... (Ctrl+F)")
-        self.txt_search.textChanged.connect(self._on_search_changed)
-        search_box.addWidget(self.txt_search, 1)
-
-        self.combo_filter = QComboBox()
-        self.combo_filter.addItem("All Messages", "ALL")
-        self.combo_filter.addItem("Unread Only", "UNREAD")
-        self.combo_filter.addItem("★ Starred / Flagged", "FLAGGED")
-        self.combo_filter.addItem("📎 With Attachments", "ATTACHMENTS")
-        self.combo_filter.currentIndexChanged.connect(self._on_filter_mode_changed)
-        search_box.addWidget(self.combo_filter)
-
-        mail_list_layout.addLayout(search_box)
-
-        # Dynamic Bulk Action Bar (Appears when 1+ checkboxes are checked or 2+ rows selected)
+        # Row 1: Gmail-Style Unified Action Toolbar (Always visible above message list)
         self.bulk_action_bar = QFrame()
         self.bulk_action_bar.setStyleSheet(
-            "background: #0d2138; border: 1px solid #00e5ff; padding: 2px 6px;"
+            "background: #0c1829; border: 1px solid #193252; padding: 2px 6px;"
         )
-        self.bulk_action_bar.setVisible(False)
         bulk_layout = QHBoxLayout(self.bulk_action_bar)
         bulk_layout.setContentsMargins(4, 2, 4, 2)
         bulk_layout.setSpacing(4)
 
-        self.lbl_bulk_count = QLabel("☑ 0 SELECTED")
-        self.lbl_bulk_count.setStyleSheet("color: #00e5ff; font-weight: bold; font-size: 8pt;")
-        bulk_layout.addWidget(self.lbl_bulk_count)
+        self.chk_select_all = QCheckBox("All")
+        self.chk_select_all.setToolTip("Select / Deselect all messages in current view")
+        self.chk_select_all.setStyleSheet(f"color: {COLORS['text_accent']}; font-size: 8pt; font-weight: bold;")
+        self.chk_select_all.toggled.connect(self._on_select_all_toggled)
+        bulk_layout.addWidget(self.chk_select_all)
 
-        bulk_layout.addStretch()
+        lbl_sep = QLabel("|")
+        lbl_sep.setStyleSheet("color: #1e385c;")
+        bulk_layout.addWidget(lbl_sep)
 
-        btn_bulk_read = QPushButton("✔ Mark Read")
-        btn_bulk_read.setFixedHeight(19)
-        btn_bulk_read.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
-        btn_bulk_read.clicked.connect(lambda: self._set_selected_read_state(True))
-        bulk_layout.addWidget(btn_bulk_read)
-
-        btn_bulk_unread = QPushButton("● Mark Unread")
-        btn_bulk_unread.setFixedHeight(19)
-        btn_bulk_unread.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
-        btn_bulk_unread.clicked.connect(lambda: self._set_selected_read_state(False))
-        bulk_layout.addWidget(btn_bulk_unread)
-
-        btn_bulk_arch = QPushButton("📦 Archive")
-        btn_bulk_arch.setFixedHeight(19)
-        btn_bulk_arch.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
-        btn_bulk_arch.clicked.connect(self._archive_selected_message)
-        bulk_layout.addWidget(btn_bulk_arch)
+        self.btn_archive = QPushButton("📦 Archive")
+        self.btn_archive.setFixedHeight(20)
+        self.btn_archive.setToolTip("Archive selected message(s) (Ctrl+E)")
+        self.btn_archive.setStyleSheet("font-size: 7.5pt; padding: 1px 7px;")
+        self.btn_archive.clicked.connect(self._archive_selected_message)
+        bulk_layout.addWidget(self.btn_archive)
 
         btn_bulk_spam = QPushButton("⚠ Spam")
-        btn_bulk_spam.setFixedHeight(19)
-        btn_bulk_spam.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        btn_bulk_spam.setFixedHeight(20)
+        btn_bulk_spam.setToolTip("Report Spam / Quarantine selected message(s) (Ctrl+J)")
+        btn_bulk_spam.setStyleSheet("font-size: 7.5pt; padding: 1px 7px;")
         btn_bulk_spam.clicked.connect(self._spam_selected_message)
         bulk_layout.addWidget(btn_bulk_spam)
 
+        self.btn_delete = QPushButton("🗑 Delete")
+        self.btn_delete.setFixedHeight(20)
+        self.btn_delete.setToolTip("Delete selected message(s) (Del)")
+        self.btn_delete.setStyleSheet("font-size: 7.5pt; padding: 1px 7px;")
+        self.btn_delete.clicked.connect(self._delete_selected_message)
+        bulk_layout.addWidget(self.btn_delete)
+
+        btn_bulk_read = QPushButton("✔ Mark Read")
+        btn_bulk_read.setFixedHeight(20)
+        btn_bulk_read.setStyleSheet("font-size: 7.5pt; padding: 1px 7px;")
+        btn_bulk_read.clicked.connect(lambda: self._set_selected_read_state(True))
+        bulk_layout.addWidget(btn_bulk_read)
+
+        btn_bulk_unread = QPushButton("● Unread")
+        btn_bulk_unread.setFixedHeight(20)
+        btn_bulk_unread.setStyleSheet("font-size: 7.5pt; padding: 1px 7px;")
+        btn_bulk_unread.clicked.connect(lambda: self._set_selected_read_state(False))
+        bulk_layout.addWidget(btn_bulk_unread)
+
         self.btn_bulk_move = QPushButton("📁 Move To ▾")
-        self.btn_bulk_move.setFixedHeight(19)
-        self.btn_bulk_move.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        self.btn_bulk_move.setFixedHeight(20)
+        self.btn_bulk_move.setStyleSheet("font-size: 7.5pt; padding: 1px 7px;")
         self.bulk_move_menu = QMenu(self)
         self.bulk_move_menu.aboutToShow.connect(self._populate_bulk_move_menu)
         self.btn_bulk_move.setMenu(self.bulk_move_menu)
         bulk_layout.addWidget(self.btn_bulk_move)
 
-        btn_bulk_del = QPushButton("✕ Delete")
-        btn_bulk_del.setFixedHeight(19)
-        btn_bulk_del.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
-        btn_bulk_del.clicked.connect(self._delete_selected_message)
-        bulk_layout.addWidget(btn_bulk_del)
+        self.btn_shred = QPushButton("🔥 Burn")
+        self.btn_shred.setFixedHeight(20)
+        self.btn_shred.setToolTip("Cryptographically shred selected message(s) & attachments (Shift+Del)")
+        self.btn_shred.setStyleSheet("font-size: 7.5pt; padding: 1px 7px; color: #ff3860;")
+        self.btn_shred.clicked.connect(self._shred_selected_message)
+        bulk_layout.addWidget(self.btn_shred)
 
-        btn_bulk_burn = QPushButton("🔥 Burn")
-        btn_bulk_burn.setFixedHeight(19)
-        btn_bulk_burn.setStyleSheet("font-size: 7.5pt; padding: 1px 6px; color: #ff3860;")
-        btn_bulk_burn.clicked.connect(self._shred_selected_message)
-        bulk_layout.addWidget(btn_bulk_burn)
+        bulk_layout.addStretch()
 
-        btn_bulk_clear = QPushButton("Clear ☑")
-        btn_bulk_clear.setFixedHeight(19)
-        btn_bulk_clear.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
-        btn_bulk_clear.clicked.connect(lambda: self._set_all_checkboxes(False))
-        bulk_layout.addWidget(btn_bulk_clear)
+        self.lbl_bulk_count = QLabel("")
+        self.lbl_bulk_count.setStyleSheet("color: #00e5ff; font-weight: bold; font-size: 8pt;")
+        bulk_layout.addWidget(self.lbl_bulk_count)
+
+        self.btn_bulk_clear = QPushButton("Clear ☑")
+        self.btn_bulk_clear.setFixedHeight(19)
+        self.btn_bulk_clear.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
+        self.btn_bulk_clear.setVisible(False)
+        self.btn_bulk_clear.clicked.connect(lambda: self._set_all_checkboxes(False))
+        bulk_layout.addWidget(self.btn_bulk_clear)
 
         mail_list_layout.addWidget(self.bulk_action_bar)
 
-        # Messages Table (With per-row Checkboxes & Extended Multi-Selection)
+        # Row 2: Gmail-Style Category Tabs (All, Primary, Social, Updates, Promotions, Forums)
+        cat_bar = QFrame()
+        cat_bar.setStyleSheet("background: #090e17; border-bottom: 1px solid #14243b; padding: 1px 4px;")
+        cat_layout = QHBoxLayout(cat_bar)
+        cat_layout.setContentsMargins(4, 2, 4, 2)
+        cat_layout.setSpacing(4)
+
+        self.cat_group = QButtonGroup(self)
+        self.cat_btns = {}
+        for cat_name in ["ALL", "Primary", "Social", "Updates", "Promotions", "Forums"]:
+            label_txt = "All Mail" if cat_name == "ALL" else cat_name
+            btn = QPushButton(label_txt)
+            btn.setCheckable(True)
+            btn.setStyleSheet("font-size: 8pt; padding: 2px 10px; min-height: 16px;")
+            if cat_name == "ALL":
+                btn.setChecked(True)
+            btn.clicked.connect(lambda checked=False, c=cat_name: self._set_category_filter(c))
+            self.cat_group.addButton(btn)
+            self.cat_btns[cat_name] = btn
+            cat_layout.addWidget(btn)
+
+        cat_layout.addStretch()
+
+        lbl_clearance = QLabel("CLEARANCE: FIELD AGENT // AES-256 + DPAPI")
+        lbl_clearance.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 7.5pt;")
+        cat_layout.addWidget(lbl_clearance)
+
+        mail_list_layout.addWidget(cat_bar)
+
+        # Row 3: Messages Table (With per-row Checkboxes & Extended Multi-Selection)
         self.table_messages = QTableWidget()
         self.table_messages.setColumnCount(6)
         self.table_messages.setHorizontalHeaderLabels(["☑ / FLAGS", "FROM", "SUBJECT", "CATEGORY", "DATE", "SIZE"])
@@ -772,11 +772,11 @@ class CritMailWindow(FramelessWindow):
 
         self.right_splitter.addWidget(mail_list_widget)
 
-        # Right Bottom: Message Reader Pane
+        # Right Bottom: Message Reader Pane (Gmail-Style Header + Body)
         reader_widget = QWidget()
         reader_layout = QVBoxLayout(reader_widget)
         reader_layout.setContentsMargins(0, 0, 0, 0)
-        reader_layout.setSpacing(3)
+        reader_layout.setSpacing(2)
 
         # 1-Click Auto-Unsubscribe Banner (Google-Style)
         self.unsub_banner = QFrame()
@@ -799,7 +799,52 @@ class CritMailWindow(FramelessWindow):
 
         reader_layout.addWidget(self.unsub_banner)
 
-        # Security Shield Banner & Reader Action Bar
+        # Message Headers Display Area + Gmail-Style Reply/Forward Actions
+        self.header_panel = QFrame()
+        self.header_panel.setStyleSheet("background: #090e17; border: 1px solid #14243b; padding: 5px;")
+        hdr_layout = QVBoxLayout(self.header_panel)
+        hdr_layout.setContentsMargins(6, 4, 6, 4)
+        hdr_layout.setSpacing(3)
+
+        subj_row = QHBoxLayout()
+        subj_row.setSpacing(6)
+        self.lbl_msg_subject = QLabel("(Select a message to read)")
+        self.lbl_msg_subject.setStyleSheet(f"color: {COLORS['text_accent']}; font-weight: bold; font-size: 9.5pt;")
+        subj_row.addWidget(self.lbl_msg_subject, 1)
+
+        self.lbl_classification_stamp = QLabel("[ CLEARANCE: STANDBY ]")
+        self.lbl_classification_stamp.setStyleSheet(
+            "background: #102136; color: #00e5ff; border: 1px solid #00d4ff; padding: 1px 6px; font-size: 7.5pt; font-weight: bold;"
+        )
+        subj_row.addWidget(self.lbl_classification_stamp)
+
+        self.btn_reply = QPushButton("↩ Reply")
+        self.btn_reply.setFixedHeight(20)
+        self.btn_reply.setStyleSheet("font-size: 7.5pt; padding: 1px 8px;")
+        self.btn_reply.clicked.connect(self._reply_to_current)
+        subj_row.addWidget(self.btn_reply)
+
+        self.btn_reply_all = QPushButton("↩↩ Reply All")
+        self.btn_reply_all.setFixedHeight(20)
+        self.btn_reply_all.setStyleSheet("font-size: 7.5pt; padding: 1px 8px;")
+        self.btn_reply_all.clicked.connect(self._reply_all_to_current)
+        subj_row.addWidget(self.btn_reply_all)
+
+        self.btn_forward = QPushButton("↪ Forward")
+        self.btn_forward.setFixedHeight(20)
+        self.btn_forward.setStyleSheet("font-size: 7.5pt; padding: 1px 8px;")
+        self.btn_forward.clicked.connect(self._forward_current)
+        subj_row.addWidget(self.btn_forward)
+
+        hdr_layout.addLayout(subj_row)
+
+        self.lbl_msg_meta = QLabel("")
+        self.lbl_msg_meta.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 8pt;")
+        hdr_layout.addWidget(self.lbl_msg_meta)
+
+        reader_layout.addWidget(self.header_panel)
+
+        # Compact Security Shield & Message Utilities Bar
         self.shield_banner = QFrame()
         self.shield_banner.setObjectName("SecurityShieldBanner")
         shield_layout = QHBoxLayout(self.shield_banner)
@@ -819,89 +864,33 @@ class CritMailWindow(FramelessWindow):
         self.btn_decrypt_cipher.clicked.connect(self._decrypt_current_message)
         shield_layout.addWidget(self.btn_decrypt_cipher)
 
-        self.btn_save_att = QPushButton("📎 Attachments")
+        self.btn_save_att = QPushButton("📎 Save Attachments")
         self.btn_save_att.setFixedHeight(18)
-        self.btn_save_att.setStyleSheet("font-size: 7.5pt; padding: 1px 5px;")
+        self.btn_save_att.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
         self.btn_save_att.setVisible(False)
         self.btn_save_att.clicked.connect(self._save_attachments_to_disk)
         shield_layout.addWidget(self.btn_save_att)
 
         self.btn_load_images = QPushButton("🖼 Block Images" if self.allow_remote_images else "🖼 Load Images")
         self.btn_load_images.setFixedHeight(18)
-        self.btn_load_images.setStyleSheet("font-size: 7.5pt; padding: 1px 5px;")
+        self.btn_load_images.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
         self.btn_load_images.clicked.connect(self._toggle_remote_images)
         shield_layout.addWidget(self.btn_load_images)
 
-        self.btn_headers = QPushButton("🔍 Headers")
+        self.btn_headers = QPushButton("🔍 Raw Headers")
         self.btn_headers.setFixedHeight(18)
-        self.btn_headers.setStyleSheet("font-size: 7.5pt; padding: 1px 5px;")
+        self.btn_headers.setStyleSheet("font-size: 7.5pt; padding: 1px 6px;")
         self.btn_headers.clicked.connect(self._view_raw_headers)
         shield_layout.addWidget(self.btn_headers)
 
-        self.btn_archive = QPushButton("📦 Archive")
-        self.btn_archive.setFixedHeight(18)
-        self.btn_archive.setStyleSheet("font-size: 7.5pt; padding: 1px 5px;")
-        self.btn_archive.clicked.connect(self._archive_selected_message)
-        shield_layout.addWidget(self.btn_archive)
-
-        self.btn_shred = QPushButton("🔥 Burn")
-        self.btn_shred.setFixedHeight(18)
-        self.btn_shred.setToolTip("Permanently shred message & attachments (Shift+Del)")
-        self.btn_shred.setStyleSheet("font-size: 7.5pt; padding: 1px 5px; color: #ff3860;")
-        self.btn_shred.clicked.connect(self._shred_selected_message)
-        shield_layout.addWidget(self.btn_shred)
-
-        self.btn_reply = QPushButton("↩ Reply")
-        self.btn_reply.setFixedHeight(18)
-        self.btn_reply.setStyleSheet("font-size: 7.5pt; padding: 1px 5px;")
-        self.btn_reply.clicked.connect(self._reply_to_current)
-        shield_layout.addWidget(self.btn_reply)
-
-        self.btn_reply_all = QPushButton("↩↩ Reply All")
-        self.btn_reply_all.setFixedHeight(18)
-        self.btn_reply_all.setStyleSheet("font-size: 7.5pt; padding: 1px 5px;")
-        self.btn_reply_all.clicked.connect(self._reply_all_to_current)
-        shield_layout.addWidget(self.btn_reply_all)
-
-        self.btn_forward = QPushButton("↪ Forward")
-        self.btn_forward.setFixedHeight(18)
-        self.btn_forward.setStyleSheet("font-size: 7.5pt; padding: 1px 5px;")
-        self.btn_forward.clicked.connect(self._forward_current)
-        shield_layout.addWidget(self.btn_forward)
-
         reader_layout.addWidget(self.shield_banner)
-
-        # Message Headers Display Area + Spy Classification Stamp
-        self.header_panel = QFrame()
-        self.header_panel.setStyleSheet("background: #090e17; border: 1px solid #14243b; padding: 5px;")
-        hdr_layout = QVBoxLayout(self.header_panel)
-        hdr_layout.setContentsMargins(4, 3, 4, 3)
-        hdr_layout.setSpacing(2)
-
-        subj_row = QHBoxLayout()
-        self.lbl_msg_subject = QLabel("(Select a transmission to inspect)")
-        self.lbl_msg_subject.setStyleSheet(f"color: {COLORS['text_accent']}; font-weight: bold; font-size: 9.5pt;")
-        subj_row.addWidget(self.lbl_msg_subject, 1)
-
-        self.lbl_classification_stamp = QLabel("[ CLEARANCE: STANDBY ]")
-        self.lbl_classification_stamp.setStyleSheet(
-            "background: #102136; color: #00e5ff; border: 1px solid #00d4ff; padding: 1px 6px; font-size: 7.5pt; font-weight: bold;"
-        )
-        subj_row.addWidget(self.lbl_classification_stamp)
-        hdr_layout.addLayout(subj_row)
-
-        self.lbl_msg_meta = QLabel("")
-        self.lbl_msg_meta.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 8pt;")
-        hdr_layout.addWidget(self.lbl_msg_meta)
-
-        reader_layout.addWidget(self.header_panel)
 
         # Body Text Browser
         self.browser_body = SafeTextBrowser(self)
         reader_layout.addWidget(self.browser_body, 1)
 
         self.right_splitter.addWidget(reader_widget)
-        self.right_splitter.setSizes([260, 390])
+        self.right_splitter.setSizes([270, 380])
 
         self.main_splitter.addWidget(self.right_splitter)
         self.main_splitter.setSizes([245, 870])
@@ -1033,11 +1022,12 @@ class CritMailWindow(FramelessWindow):
         self.chk_select_all.blockSignals(True)
         self.chk_select_all.setChecked(False)
         self.chk_select_all.blockSignals(False)
-        self.bulk_action_bar.setVisible(False)
+        self.lbl_bulk_count.setText("")
+        self.btn_bulk_clear.setVisible(False)
 
         self.current_message_id = None
         self.browser_body.clear()
-        self.lbl_msg_subject.setText("(Select a message to view)")
+        self.lbl_msg_subject.setText("(Select a message to read)")
         self.lbl_msg_meta.setText("")
         self.btn_save_att.setVisible(False)
         self.unsub_banner.setVisible(False)
@@ -1165,12 +1155,13 @@ class CritMailWindow(FramelessWindow):
 
         if len(checked_ids) > 0:
             self.lbl_bulk_count.setText(f"☑ {len(checked_ids)} CHECKED")
-            self.bulk_action_bar.setVisible(True)
+            self.btn_bulk_clear.setVisible(True)
         elif len(selected_ids) > 1:
             self.lbl_bulk_count.setText(f"☑ {len(selected_ids)} SELECTED")
-            self.bulk_action_bar.setVisible(True)
+            self.btn_bulk_clear.setVisible(False)
         else:
-            self.bulk_action_bar.setVisible(False)
+            self.lbl_bulk_count.setText("")
+            self.btn_bulk_clear.setVisible(False)
 
     def _on_message_selected(self):
         self._update_bulk_action_bar()
