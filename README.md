@@ -8,6 +8,7 @@
 <p align="center">
   <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest"><img src="https://img.shields.io/badge/Download-CritMail_v1.0.0_(Windows_x64)-00b4d8?style=for-the-badge&logo=windows&logoColor=white" alt="Download Latest Release" /></a>
   <a href="https://github.com/sponsors/critmaths"><img src="https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=for-the-badge&logo=github&logoColor=white" alt="Sponsor on GitHub" /></a>
+  <a href="https://patreon.com/omav"><img src="https://img.shields.io/badge/Patreon-Support_Project-f96854?style=for-the-badge&logo=patreon&logoColor=white" alt="Support on Patreon" /></a>
 </p>
 
 <p align="center">
@@ -45,8 +46,8 @@
 
 1. **[Download `CritMail.exe` from the Official Releases Page](https://github.com/critmaths/crit-mail-client-releases/releases/latest)**
 2. Launch `CritMail.exe`.
-3. Click **`[ ✉ ACCOUNTS ]`** in the top toolbar (or `File -> Account Settings`), enter your mailbox credentials (stored locally via Windows DPAPI hardware encryption), and click **`⚡ Test Connection`**.
-4. Press **`F5`** or click **`[ ⟳ GET MAIL ]`** to synchronize your inbox!
+3. Click **`[ ⚙ Accounts ]`** in the bottom-left sidebar (or `File -> Account Settings`), enter your mailbox credentials (stored locally via Windows DPAPI hardware encryption), and click **`⚡ Test Connection`**.
+4. Press **`F5`** or click **`[ ⟳ Sync Mail ]`** to synchronize your inbox!
 
 ---
 
@@ -89,6 +90,20 @@
 
 ---
 
+## 🤝 Support, Community & Donations
+
+If you enjoy **CritMail** and want to support continued development of **Critical Softworks** & **The Intelligence Agency** security tools:
+
+- 🌐 **Official Website & Agent Portal:** [theintelligenceagency.net](https://theintelligenceagency.net)
+- 🐛 **Issue Tracker & Bug Reports:** [Open a GitHub Issue](https://github.com/critmaths/crit-mail-client-releases/issues)
+- 💖 **Sponsor on GitHub:** [github.com/sponsors/critmaths](https://github.com/sponsors/critmaths)
+- 🧡 **Support the Project on Patreon:** [patreon.com/omav](https://patreon.com/omav)
+
 <p align="center">
-  <em>© 2026 CritMail // The Intelligence Agency. All rights reserved.</em>
+  <a href="https://github.com/sponsors/critmaths"><img src="https://img.shields.io/badge/Sponsor_on_GitHub-%E2%9D%A4-ea4aaa?style=for-the-badge&logo=github&logoColor=white" alt="Sponsor on GitHub" /></a>
+  <a href="https://patreon.com/omav"><img src="https://img.shields.io/badge/Support_on_Patreon-f96854?style=for-the-badge&logo=patreon&logoColor=white" alt="Support on Patreon" /></a>
+</p>
+
+<p align="center">
+  <em>© 2026 CritMail // The Intelligence Agency • Critical Softworks. All rights reserved.</em>
 </p>
