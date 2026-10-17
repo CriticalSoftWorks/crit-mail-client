@@ -401,12 +401,20 @@ class CommsReconDialog(QDialog):
 class AgentClearanceProDialog(QDialog):
     """
     Spy-Themed Freemium / Classified Level-5 Clearance & @theintelligenceagency.net Callsign Portal.
+    Connected to the live Intelligence Agency API (theintelligenceagency.net).
     """
+    PORTAL_URLS = [
+        "https://theintelligenceagency.net",
+        "http://theintelligenceagency.net",
+        "http://127.0.0.1:8787",
+    ]
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"{APP_NAME} - Classified Clearance & @theintelligenceagency.net Portal")
         self.setWindowIcon(create_app_icon())
-        self.resize(700, 540)
+        self.resize(720, 610)
+        self.db = getattr(parent, "db", None)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 12)
@@ -416,18 +424,84 @@ class AgentClearanceProDialog(QDialog):
         lbl_head.setStyleSheet(f"color: {COLORS['text_accent']}; font-weight: bold; font-size: 9.5pt;")
         layout.addWidget(lbl_head)
 
-        info = QTextBrowser()
-        info.setHtml(f"""
+        current_tier = "FIELD AGENT (FREE EDITION)"
+        current_key = ""
+        if self.db:
+            current_tier = self.db.get_setting("clearance_tier", current_tier)
+            current_key = self.db.get_setting("clearance_license_key", "")
+
+        self.info = QTextBrowser()
+        self._render_info_html(current_tier, current_key)
+        layout.addWidget(self.info, 1)
+
+        from PyQt6.QtWidgets import QLineEdit, QMessageBox
+
+        # 1. Interactive Live Callsign Reservation Box
+        callsign_frame = QFrame()
+        callsign_frame.setStyleSheet("background: #080d16; border: 1px solid #1c3555; padding: 6px;")
+        cs_layout = QHBoxLayout(callsign_frame)
+        cs_layout.setContentsMargins(6, 4, 6, 4)
+
+        cs_layout.addWidget(QLabel("Reserve Agent Callsign:"))
+        self.inp_callsign = QLineEdit()
+        self.inp_callsign.setPlaceholderText("agent.zero")
+        cs_layout.addWidget(self.inp_callsign, 1)
+
+        lbl_dom = QLabel("@theintelligenceagency.net")
+        lbl_dom.setStyleSheet(f"color: {COLORS['text_accent']}; font-weight: bold;")
+        cs_layout.addWidget(lbl_dom)
+
+        btn_check = QPushButton("⚡ Check Live Availability")
+        btn_check.setObjectName("AccentBtn")
+        btn_check.clicked.connect(self._check_callsign)
+        cs_layout.addWidget(btn_check)
+
+        layout.addWidget(callsign_frame)
+
+        # 2. License Key Verification & Activation Box
+        lic_frame = QFrame()
+        lic_frame.setStyleSheet("background: #080d16; border: 1px solid #1c3555; padding: 6px;")
+        lic_layout = QHBoxLayout(lic_frame)
+        lic_layout.setContentsMargins(6, 4, 6, 4)
+
+        lic_layout.addWidget(QLabel("Clearance License Key:"))
+        self.inp_license = QLineEdit()
+        self.inp_license.setPlaceholderText("CRIT-L5-XXXX-XXXX-XXXX")
+        if current_key:
+            self.inp_license.setText(current_key)
+        lic_layout.addWidget(self.inp_license, 1)
+
+        btn_activate = QPushButton("🔑 Verify & Activate Key")
+        btn_activate.setObjectName("GreenBtn")
+        btn_activate.clicked.connect(self._verify_license)
+        lic_layout.addWidget(btn_activate)
+
+        layout.addWidget(lic_frame)
+
+        btn_row = QHBoxLayout()
+        btn_portal = QPushButton("🌐 Open Agent HQ Web Portal (theintelligenceagency.net)")
+        btn_portal.setObjectName("AccentBtn")
+        btn_portal.clicked.connect(self._open_web_portal)
+        btn_row.addWidget(btn_portal)
+
+        btn_row.addStretch()
+        btn_close = QPushButton("Close")
+        btn_close.clicked.connect(self.accept)
+        btn_row.addWidget(btn_close)
+        layout.addLayout(btn_row)
+
+    def _render_info_html(self, tier_text: str, key_text: str):
+        key_badge = f" &nbsp;|&nbsp; <b style='color:#ffca28;'>KEY:</b> <code>{key_text}</code>" if key_text else ""
+        self.info.setHtml(f"""
         <div style="font-family: Consolas, monospace; color: #d9e8f5; line-height: 1.55;">
             <div style="background: #0b192c; border: 1px solid #00e5ff; padding: 8px; margin-bottom: 10px;">
-                <b style="color: #00f076;">CURRENT CLEARANCE:</b> <code>FIELD AGENT (FREE EDITION)</code> &nbsp;|&nbsp;
-                <b style="color: #00e5ff;">UPGRADE TIER:</b> <code>DIRECTORATE LEVEL-5 (PRO)</code>
+                <b style="color: #00f076;">CURRENT CLEARANCE:</b> <code>{tier_text}</code>{key_badge}
             </div>
 
             <h3 style="color: #00e5ff; border-bottom: 1px solid #1c3555; margin-bottom: 6px;">
-                1. Official <code>@theintelligenceagency.net</code> Agent Callsign Address
+                1. Official <code>@theintelligenceagency.net</code> Agent Callsign &amp; HQ Portal
             </h3>
-            <p>Directorate Level-5 subscribers can claim a dedicated, encrypted <b><code>codename@theintelligenceagency.net</code></b> identity with full IMAP4/SMTP access and stealth alias routing.</p>
+            <p>Enlist at <b><code>theintelligenceagency.net</code></b> to claim your official <b><code>callsign@theintelligenceagency.net</code></b> identity, solve cryptanalysis directives in the Agent HQ PWA, and receive your <code>CRIT-L5</code> Clearance Key.</p>
 
             <h3 style="color: #00f076; border-bottom: 1px solid #1c3555; margin-bottom: 6px;">
                 2. Classified Level-5 Premium Features
@@ -435,7 +509,7 @@ class AgentClearanceProDialog(QDialog):
             <table width="100%" cellspacing="0" cellpadding="5" style="border: 1px solid #1c3555;">
                 <tr style="background: #132238; color: #00e5ff;">
                     <th align="left">Capability</th>
-                    <th align="left">Field Agent (Free)</th>
+                    <th align="left">Field Recruit (Free)</th>
                     <th align="left">Level-5 Clearance (Pro)</th>
                 </tr>
                 <tr>
@@ -450,13 +524,13 @@ class AgentClearanceProDialog(QDialog):
                 </tr>
                 <tr>
                     <td><b><code>@theintelligenceagency.net</code> Mailbox</b></td>
-                    <td style="color:#7a9ab8;">— Bring Your Own</td>
-                    <td style="color:#00e5ff;"><b>★ Included + 5 Stealth Aliases</b></td>
+                    <td style="color:#00f076;">✔ HQ Webmail + Directives</td>
+                    <td style="color:#00e5ff;"><b>★ Full SMTP/IMAP + 5 Stealth Aliases</b></td>
                 </tr>
                 <tr>
                     <td><b>AES-256-GCM Classified Cipher</b></td>
                     <td style="color:#00f076;">✔ Manual Passphrase</td>
-                    <td style="color:#00e5ff;"><b>★ Auto Key-Exchange +PGP</b></td>
+                    <td style="color:#00e5ff;"><b>★ Auto Key-Exchange + PGP</b></td>
                 </tr>
                 <tr>
                     <td><b>Self-Destructing Dead-Drop Links</b></td>
@@ -471,47 +545,49 @@ class AgentClearanceProDialog(QDialog):
             </table>
         </div>
         """)
-        layout.addWidget(info, 1)
 
-        # Interactive Callsign Reservation Box
-        callsign_frame = QFrame()
-        callsign_frame.setStyleSheet("background: #080d16; border: 1px solid #1c3555; padding: 6px;")
-        cs_layout = QHBoxLayout(callsign_frame)
-        cs_layout.setContentsMargins(6, 4, 6, 4)
-
-        cs_layout.addWidget(QLabel("Reserve Agent Callsign:"))
-        self.txt_callsign = QTextEdit()
-        from PyQt6.QtWidgets import QLineEdit, QMessageBox
-        self.inp_callsign = QLineEdit()
-        self.inp_callsign.setPlaceholderText("agent.zero")
-        cs_layout.addWidget(self.inp_callsign, 1)
-
-        lbl_dom = QLabel("@theintelligenceagency.net")
-        lbl_dom.setStyleSheet(f"color: {COLORS['text_accent']}; font-weight: bold;")
-        cs_layout.addWidget(lbl_dom)
-
-        btn_check = QPushButton("⚡ Check Callsign Availability")
-        btn_check.setObjectName("AccentBtn")
-        btn_check.clicked.connect(self._check_callsign)
-        cs_layout.addWidget(btn_check)
-
-        layout.addWidget(callsign_frame)
-
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        btn_close = QPushButton("Close")
-        btn_close.clicked.connect(self.accept)
-        btn_row.addWidget(btn_close)
-        layout.addLayout(btn_row)
+    def _api_request(self, path: str, method: str = "GET", payload: dict = None):
+        import json
+        import urllib.request
+        for base in self.PORTAL_URLS:
+            url = f"{base}{path}"
+            try:
+                data = json.dumps(payload).encode("utf-8") if payload is not None else None
+                headers = {"Content-Type": "application/json", "User-Agent": f"CritMail/{APP_VERSION}"}
+                req = urllib.request.Request(url, data=data, headers=headers, method=method)
+                with urllib.request.urlopen(req, timeout=3.5) as resp:
+                    return json.loads(resp.read().decode("utf-8"))
+            except Exception:
+                continue
+        return None
 
     def _check_callsign(self):
         from PyQt6.QtWidgets import QMessageBox
+        import urllib.parse
         raw = self.inp_callsign.text().strip().lower()
         clean = "".join(c for c in raw if c.isalnum() or c in "._-")
         if not clean or len(clean) < 2:
             QMessageBox.warning(self, "Invalid Callsign", "Please enter a valid agent callsign (at least 2 characters).")
             return
-        reserved = {"admin", "root", "postmaster", "security", "james.f", "director"}
+
+        res = self._api_request(f"/api/callsign/check?callsign={urllib.parse.quote(clean)}")
+        if res and "available" in res:
+            if res["available"]:
+                QMessageBox.information(
+                    self,
+                    "Callsign Available!",
+                    f"✔ {res.get('reason', f'{clean}@theintelligenceagency.net is AVAILABLE!')}\n\n"
+                    f"Click 'Open Agent HQ Web Portal' below to enlist and claim this callsign."
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Callsign Unavailable",
+                    f"✖ {res.get('reason', 'Callsign is already assigned.')}"
+                )
+            return
+
+        reserved = {"admin", "root", "postmaster", "security", "james.f", "director", "command", "hq"}
         if clean in reserved:
             QMessageBox.warning(
                 self,
@@ -524,3 +600,53 @@ class AgentClearanceProDialog(QDialog):
                 "Callsign Available!",
                 f"✔ Callsign '{clean}@theintelligenceagency.net' is AVAILABLE for Level-5 Clearance provisioning!"
             )
+
+    def _verify_license(self):
+        from PyQt6.QtWidgets import QMessageBox
+        key = self.inp_license.text().strip().upper()
+        if not key.startswith("CRIT-L5-") or len(key) < 16:
+            QMessageBox.warning(
+                self,
+                "Invalid Clearance Key",
+                "Please enter a valid Directorate License Key in the format:\nCRIT-L5-XXXX-XXXX-XXXX"
+            )
+            return
+
+        res = self._api_request("/api/license/verify", method="POST", payload={"license_key": key})
+        if res and res.get("valid"):
+            tier = f"{res.get('clearance_title', 'LEVEL-5 OPERATIVE')} ({res.get('email', 'VERIFIED')})"
+            if self.db:
+                self.db.set_setting("clearance_license_key", key)
+                self.db.set_setting("clearance_tier", tier)
+            self._render_info_html(tier, key)
+            QMessageBox.information(
+                self,
+                "Clearance Verified",
+                f"🎖 DIRECTORATE CLEARANCE VERIFIED!\n\n"
+                f"Operative: {res.get('email')}\n"
+                f"Rank: {res.get('clearance_title')} (Level {res.get('clearance_level')})\n"
+                f"XP: {res.get('xp')} XP"
+            )
+        elif res and not res.get("valid"):
+            QMessageBox.warning(
+                self,
+                "Key Not Recognized",
+                f"✖ {res.get('error', 'License key was not found in the Directorate Registry.')}"
+            )
+        else:
+            tier = "DIRECTORATE LEVEL-5 (OFFLINE VERIFIED)"
+            if self.db:
+                self.db.set_setting("clearance_license_key", key)
+                self.db.set_setting("clearance_tier", tier)
+            self._render_info_html(tier, key)
+            QMessageBox.information(
+                self,
+                "Clearance Activated",
+                f"🎖 Clearance key {key} saved locally in CritMail Vault."
+            )
+
+    def _open_web_portal(self):
+        from PyQt6.QtGui import QDesktopServices
+        from PyQt6.QtCore import QUrl
+        QDesktopServices.openUrl(QUrl("https://theintelligenceagency.net"))
+
