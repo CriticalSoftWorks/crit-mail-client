@@ -1,7 +1,7 @@
 {
-  "name": "The Intelligence Agency // CritMail HQ",
+  "name": "The Intelligence Agency — Academy & Webmail HQ",
   "short_name": "Agency HQ",
-  "description": "Classified SIGINT Communications Terminal, Agent Webmail, Cryptanalysis Missions & Declassified FOIA Vault.",
+  "description": "Cybersecurity, Python & IT Training Academy, Encrypted @theintelligenceagency.net Webmail, Cryptanalysis Missions & Declassified FOIA Vault.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#060b14",

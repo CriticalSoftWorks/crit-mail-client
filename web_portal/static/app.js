@@ -229,10 +229,12 @@ function escapeHtml(str) {
 
 async function loadAgentDashboard() {
   const token = localStorage.getItem(TOKEN_KEY);
+  const toggleBtn = document.getElementById("btn-toggle-public-hq");
   if (!token) {
     document.getElementById("agent-hq-section").classList.remove("active");
     document.getElementById("public-landing-section").style.display = "block";
     document.getElementById("btn-logout").style.display = "none";
+    if (toggleBtn) toggleBtn.style.display = "none";
     document.getElementById("btn-open-login").style.display = "inline-flex";
     document.getElementById("btn-open-enlist").style.display = "inline-flex";
     return;
@@ -252,6 +254,10 @@ async function loadAgentDashboard() {
     document.getElementById("public-landing-section").style.display = "none";
     document.getElementById("agent-hq-section").classList.add("active");
     document.getElementById("btn-logout").style.display = "inline-flex";
+    if (toggleBtn) {
+      toggleBtn.style.display = "inline-flex";
+      toggleBtn.textContent = "🌐 Public Academy Page";
+    }
     document.getElementById("btn-open-login").style.display = "none";
     document.getElementById("btn-open-enlist").style.display = "none";
 
@@ -260,7 +266,7 @@ async function loadAgentDashboard() {
     document.getElementById("hq-agent-title").textContent = `OPERATIVE: ${a.display_name.toUpperCase()}`;
     document.getElementById("hq-agent-email").textContent = `OFFICIAL AGENCY CHANNEL: ${a.email_address}`;
     document.getElementById("hq-agent-rank").textContent = `RANK: ${a.rank}`;
-    document.getElementById("hq-agent-xp").textContent = `XP: ${a.xp} // KEY: ${a.license_key}`;
+    document.getElementById("hq-agent-xp").textContent = `XP: ${a.xp} // CLEARANCE ID: ${a.license_key}`;
     document.getElementById("dossier-license-key").textContent = a.license_key;
 
     // Render Inbox List
@@ -666,6 +672,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-claim-searched-callsign")?.addEventListener("click", () => {
     openEnlistModal("OPERATIVE_MONTHLY");
+  });
+
+  document.getElementById("brand-home-link")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem(TOKEN_KEY);
+    const hqSec = document.getElementById("agent-hq-section");
+    const pubSec = document.getElementById("public-landing-section");
+    const toggleBtn = document.getElementById("btn-toggle-public-hq");
+    if (token && currentDashboard) {
+      pubSec.style.display = "none";
+      hqSec.classList.add("active");
+      if (toggleBtn) toggleBtn.textContent = "🌐 Public Academy Page";
+    } else {
+      hqSec.classList.remove("active");
+      pubSec.style.display = "block";
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  document.getElementById("btn-toggle-public-hq")?.addEventListener("click", () => {
+    const hqSec = document.getElementById("agent-hq-section");
+    const pubSec = document.getElementById("public-landing-section");
+    const toggleBtn = document.getElementById("btn-toggle-public-hq");
+    if (hqSec.classList.contains("active")) {
+      hqSec.classList.remove("active");
+      pubSec.style.display = "block";
+      toggleBtn.textContent = "📡 Return to Agent HQ";
+    } else {
+      pubSec.style.display = "none";
+      hqSec.classList.add("active");
+      toggleBtn.textContent = "🌐 Public Academy Page";
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
   document.getElementById("btn-open-enlist")?.addEventListener("click", () => openEnlistModal("OPERATIVE_MONTHLY"));

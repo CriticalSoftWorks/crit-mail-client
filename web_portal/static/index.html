@@ -10,7 +10,7 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/png" href="/icon.png" />
   <link rel="apple-touch-icon" href="/icon.png" />
-  <title>THE INTELLIGENCE AGENCY // SIGINT Comms, Cryptanalysis &amp; CritMail HQ</title>
+  <title>THE INTELLIGENCE AGENCY // Cybersecurity Academy, SIGINT Webmail &amp; Cryptanalysis</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -22,17 +22,17 @@
 
   <!-- Sticky Top Command Header -->
   <header class="top-nav">
-    <div class="brand-wrap">
+    <a href="/" id="brand-home-link" class="brand-wrap" style="text-decoration:none; color:inherit; cursor:pointer;" title="Return to Agent HQ Dashboard / Home">
       <img src="/icon.png" alt="The Intelligence Agency Crest" class="brand-logo" width="34" height="34" />
       <div>
-        <div class="brand-title">THE INTELLIGENCE AGENCY // CRITMAIL HQ</div>
-        <div class="brand-sub">CRITICAL SOFTWORKS • SIGINT COMMUNICATIONS &amp; CRYPTANALYSIS NETWORK</div>
+        <div class="brand-title">THE INTELLIGENCE AGENCY</div>
+        <div class="brand-sub">CYBERSECURITY &amp; IT ACADEMY • ENCRYPTED WEBMAIL • @THEINTELLIGENCEAGENCY.NET</div>
       </div>
-    </div>
+    </a>
 
     <div class="nav-actions">
       <button type="button" class="btn" id="btn-install-pwa" style="display:none;">📱 Install Mobile App</button>
-      <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest" target="_blank" rel="noopener" class="btn">⬇ CritMail Desktop</a>
+      <button type="button" class="btn btn-accent" id="btn-toggle-public-hq" style="display:none;">🌐 Public Academy Page</button>
       <button type="button" class="btn" id="btn-open-login">🔐 Operative Login</button>
       <button type="button" class="btn btn-green" id="btn-open-enlist">🎖 Enlist &amp; Claim Callsign</button>
       <button type="button" class="btn" id="btn-logout" style="display:none;">⏏ Lock Terminal</button>
@@ -53,7 +53,7 @@
         </div>
         <div style="text-align:right;">
           <div style="color:var(--accent-amber); font-weight:700; font-size:0.95rem;" id="hq-agent-rank">RANK: SPECIAL AGENT</div>
-          <div style="color:var(--text-accent); font-size:0.82rem;" id="hq-agent-xp">XP: 150 // LICENSE: —</div>
+          <div style="color:var(--text-accent); font-size:0.82rem;" id="hq-agent-xp">XP: 150 // CLEARANCE ID: —</div>
         </div>
       </div>
 
@@ -62,7 +62,7 @@
         <button type="button" class="tab-btn" data-tab="pane-academy">🎓 Cyber &amp; IT Academy</button>
         <button type="button" class="tab-btn" data-tab="pane-missions">🧩 Cryptanalysis &amp; Recon Ops</button>
         <button type="button" class="tab-btn" data-tab="pane-foia">🗄 Declassified FOIA Vault</button>
-        <button type="button" class="tab-btn" data-tab="pane-dossier">🎖 Operative Dossier &amp; CritMail Key</button>
+        <button type="button" class="tab-btn" data-tab="pane-dossier">🎖 Operative Dossier &amp; Credentials</button>
       </nav>
 
       <!-- TAB 1: SIGINT WEBMAIL & MOBILE PWA TERMINAL -->
@@ -142,30 +142,30 @@
         <div id="foia-list-container"></div>
       </div>
 
-      <!-- TAB 5: OPERATIVE DOSSIER & CRITMAIL PRO LICENSE KEY -->
+      <!-- TAB 5: OPERATIVE DOSSIER & CREDENTIALS -->
       <div class="hq-pane" id="pane-dossier">
-        <h3 style="color:var(--text-accent); margin-bottom:0.75rem;">🎖 OPERATIVE CREDENTIALS &amp; CRITMAIL DESKTOP CONFIGURATION</h3>
+        <h3 style="color:var(--text-accent); margin-bottom:0.75rem;">🎖 OPERATIVE CREDENTIALS, IMAP/SMTP SETTINGS &amp; CAREER PATHWAYS</h3>
         <div class="grid-3">
           <div class="intel-card">
             <div>
-              <h3>🔑 CritMail Level-5 License Key</h3>
-              <p>Paste this key into <strong>CritMail Desktop &rarr; Level-5 Pro</strong> to unlock all classified client features and auto-configure your mailbox:</p>
+              <h3>🔑 Operative Clearance Key</h3>
+              <p>Your unique Directorate Clearance Token for API verification and optional desktop terminal pairing:</p>
               <div class="cipher-box" id="dossier-license-key" style="font-size:1rem; font-weight:700; text-align:center;">—</div>
             </div>
-            <button type="button" class="btn btn-accent" id="btn-copy-license">📋 Copy License Key</button>
+            <button type="button" class="btn btn-accent" id="btn-copy-license">📋 Copy Clearance Key</button>
           </div>
 
           <div class="intel-card">
             <div>
-              <h3>📡 IMAP / SMTP Server Settings</h3>
-              <p>Use your callsign inside <strong>CritMail</strong> (Windows, macOS, Linux) or mobile mail apps:</p>
+              <h3>📡 Standard IMAP / SMTP Access</h3>
+              <p>Connect your <code>@theintelligenceagency.net</code> address to any mobile or desktop mail app (optional):</p>
               <div class="cipher-box" style="font-size:0.78rem; color:var(--text-primary);">
 Incoming IMAP : mailserver.businessidentity.llc
 IMAP Port     : 993 (SSL/TLS)
 Outgoing SMTP : email-smtp.us-east-1.amazonaws.com
 SMTP Port     : 465 (SSL/TLS)</div>
             </div>
-            <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest" target="_blank" rel="noopener" class="btn">⬇ Download CritMail Client</a>
+            <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest" target="_blank" rel="noopener" class="btn">⬇ Optional Desktop Utility</a>
           </div>
 
           <div class="intel-card">
@@ -192,7 +192,7 @@ SMTP Port     : 465 (SSL/TLS)</div>
         <div class="status-pill">DEFCON 5 // RECRUITMENT OPEN • @THEINTELLIGENCEAGENCY.NET</div>
         <h1 class="hero-title">ENLIST IN <span>THE INTELLIGENCE AGENCY</span></h1>
         <p class="hero-lead">
-          Claim your official <strong><code>&lt;callsign&gt;@theintelligenceagency.net</code></strong> email address, download the <strong>CritMail SIGINT Communications Terminal</strong> (Windows, macOS, Linux &amp; Mobile PWA), complete hands-on <strong>Cybersecurity, Python &amp; IT Certification Courses</strong>, and decrypt weekly cryptanalysis operations.
+          Claim your official <strong><code>&lt;callsign&gt;@theintelligenceagency.net</code></strong> encrypted webmail identity, earn verifiable <strong>Cybersecurity, Python &amp; IT Certifications (<code>TIA-CERT</code>)</strong>, solve weekly cryptanalysis &amp; OSINT directives, and explore declassified historical intelligence archives.
         </p>
 
         <!-- Live Callsign Availability Search -->
@@ -211,16 +211,16 @@ SMTP Port     : 465 (SSL/TLS)</div>
           <div class="checker-result" id="callsign-check-output">Enter any 3+ character handle above to query the Directorate registry in real time.</div>
         </div>
 
-        <!-- Cross-Platform Download Strip -->
+        <!-- Academy & Webmail Quick-Action Strip -->
         <div class="download-strip">
           <div>
-            <div style="color:#fff; font-weight:700; font-size:0.9rem;">💻 CRITMAIL v1.0.0 // NATIVE DESKTOP &amp; MOBILE TERMINAL</div>
-            <div style="color:var(--text-secondary); font-size:0.78rem;">Free Field Agent Edition available for all platforms • Upgrade to Level-5 Clearance anytime.</div>
+            <div style="color:#fff; font-weight:700; font-size:0.9rem;">🎓 DIRECTORATE CYBERSECURITY, PYTHON &amp; IT ACADEMY + WEBMAIL HQ</div>
+            <div style="color:var(--text-secondary); font-size:0.78rem;">4 NIST NICE–aligned certification tracks • Verifiable SHA-256 credentials • Encrypted browser &amp; mobile PWA terminal.</div>
           </div>
           <div style="display:flex; flex-wrap:wrap; gap:0.45rem;">
-            <a href="https://github.com/critmaths/crit-mail-client-releases/releases/download/v1.0.0/CritMail-v1.0.0-win64.exe" class="btn btn-accent">🪟 Windows (.exe)</a>
-            <a href="https://github.com/critmaths/crit-mail-client-releases/releases/download/v1.0.0/CritMail-v1.0.0-macOS.dmg" class="btn">🍎 macOS (.dmg)</a>
-            <a href="https://github.com/critmaths/crit-mail-client-releases/releases/download/v1.0.0/CritMail-v1.0.0-linux-x64.tar.gz" class="btn">🐧 Linux (.tar.gz)</a>
+            <a href="#public-academy-section" class="btn btn-accent">🎓 Explore Academy Courses</a>
+            <a href="#input-verify-cert" class="btn">🏅 Verify a Certificate ID</a>
+            <button type="button" class="btn btn-green" onclick="openEnlistModal('OPERATIVE_MONTHLY')">⚡ Enlist Now</button>
           </div>
         </div>
       </div>
@@ -229,9 +229,9 @@ SMTP Port     : 465 (SSL/TLS)</div>
       <div class="grid-3">
         <div class="intel-card">
           <div>
-            <h3>✉ Official @theintelligenceagency.net Email</h3>
+            <h3>✉ Official @theintelligenceagency.net Webmail</h3>
             <p>
-              Stand out with an authentic <code>@theintelligenceagency.net</code> address backed by 2048-bit RSA DKIM, SPF, DMARC, and TLS 1.3 encryption. Works inside <strong>CritMail Desktop</strong>, this <strong>Mobile PWA</strong>, and standard IMAP clients.
+              Command an authentic <code>@theintelligenceagency.net</code> email address backed by 2048-bit RSA DKIM, SPF, DMARC, and TLS 1.3 encryption. Send and receive dispatches directly from the browser or installable Mobile PWA.
             </p>
           </div>
           <span style="color:var(--accent-green); font-size:0.76rem; font-weight:700;">✔ INSTANT CALLSIGN PROVISIONING</span>
@@ -249,19 +249,19 @@ SMTP Port     : 465 (SSL/TLS)</div>
 
         <div class="intel-card">
           <div>
-            <h3>🔐 CritMail SIGINT Security Suite</h3>
+            <h3>🧩 Cryptanalysis Ops &amp; FOIA Vault</h3>
             <p>
-              Zero-JavaScript HTML sandbox, 1-click AES-256-GCM body encryption ("EYES ONLY"), Stealth Redaction Mode (<code>Ctrl+Shift+X</code>), Anti-Phishing Link Guard, and Cryptographic Burn/Shredder.
+              Decrypt intercepted shortwave ciphers, numbers station hex streams, and spoofed email headers to advance from <strong>Field Operative</strong> to <strong>Directorate Fellow</strong>, and inspect declassified historical intelligence dossiers.
             </p>
           </div>
-          <span style="color:var(--accent-amber); font-size:0.76rem; font-weight:700;">✔ WINDOWS • MACOS • LINUX • MOBILE PWA</span>
+          <span style="color:var(--accent-amber); font-size:0.76rem; font-weight:700;">✔ LIVE MISSIONS, XP RANKS &amp; ARCHIVES</span>
         </div>
       </div>
 
       <!-- =================================================================== -->
       <!-- PUBLIC ACADEMY CURRICULUM & VERIFIABLE CREDENTIAL REGISTRY          -->
       <!-- =================================================================== -->
-      <div class="hero-panel">
+      <div class="hero-panel" id="public-academy-section">
         <div class="status-pill">NIST NICE WORKFORCE ALIGNED // MISSION-FIRST CYBER &amp; IT EDUCATION</div>
         <h2 style="color:var(--text-accent); font-size:1.25rem; margin-bottom:0.45rem;">🎓 THE INTELLIGENCE AGENCY ACADEMY // CERTIFICATION TRACKS</h2>
         <p style="color:var(--text-secondary); font-size:0.84rem; margin-bottom:1.1rem;">
@@ -361,18 +361,18 @@ SMTP Port     : 465 (SSL/TLS)</div>
         <div class="grid-3" style="margin-bottom:0;">
           <div class="intel-card">
             <div>
-              <h3>FIELD AGENT // FREE</h3>
+              <h3>CADET // FREE ACCESS</h3>
               <div style="font-size:1.5rem; font-weight:700; color:#fff; margin:0.4rem 0;">$0 <span style="font-size:0.8rem; color:var(--text-secondary);">forever</span></div>
-              <p>Use CritMail Desktop with your existing Gmail, Outlook, or custom IMAP/POP3 accounts with full AES-256-GCM encryption and Link Guard.</p>
+              <p>Reserve your <strong><code>@theintelligenceagency.net</code></strong> callsign, study the Academy course modules, solve introductory cipher missions, and explore the FOIA Vault.</p>
             </div>
-            <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest" target="_blank" rel="noopener" class="btn">⬇ Download Free Client</a>
+            <button type="button" class="btn" onclick="openEnlistModal('CADET_FREE')">🎓 Enlist Free as Cadet</button>
           </div>
 
           <div class="intel-card" style="border-color:var(--accent-green);">
             <div>
               <h3>LEVEL-5 OPERATIVE // PRO</h3>
               <div style="font-size:1.5rem; font-weight:700; color:var(--accent-green); margin:0.4rem 0;">$4.99 <span style="font-size:0.8rem; color:var(--text-secondary);">/ month</span></div>
-              <p>Includes your personal <strong><code>@theintelligenceagency.net</code></strong> email address, CritMail Level-5 License Key, all 4 Academy Certification Tracks, Weekly Cipher Missions &amp; FOIA Vault.</p>
+              <p>Full <strong><code>@theintelligenceagency.net</code></strong> Encrypted Webmail, all 4 Verifiable <code>TIA-CERT</code> Certification Exams &amp; CEU Credits, and priority callsign routing.</p>
             </div>
             <button type="button" class="btn btn-green" onclick="openEnlistModal('OPERATIVE_MONTHLY')">🎖 Enlist as Level-5 Operative</button>
           </div>
@@ -381,7 +381,7 @@ SMTP Port     : 465 (SSL/TLS)</div>
             <div>
               <h3>STATION CHIEF // LIFETIME</h3>
               <div style="font-size:1.5rem; font-weight:700; color:var(--text-accent); margin:0.4rem 0;">$39.99 <span style="font-size:0.8rem; color:var(--text-secondary);">one-time</span></div>
-              <p>Permanent lifetime reservation of your <strong><code>@theintelligenceagency.net</code></strong> callsign, lifetime CritMail Pro license key, all current &amp; future Academy Certifications, and Founder badge.</p>
+              <p>Permanent lifetime reservation of your <strong><code>@theintelligenceagency.net</code></strong> callsign, all current &amp; future Academy Certifications, and Founder Station Chief badge.</p>
             </div>
             <button type="button" class="btn btn-accent" onclick="openEnlistModal('FOUNDER_LIFETIME')">⚡ Claim Lifetime Clearance</button>
           </div>
@@ -400,7 +400,7 @@ SMTP Port     : 465 (SSL/TLS)</div>
       <button type="button" class="btn" onclick="document.getElementById('dlg-enlist').close()">✕</button>
     </div>
     <p style="color:var(--text-secondary); font-size:0.8rem; margin-bottom:1rem;">
-      Reserve your <code>@theintelligenceagency.net</code> address and generate your <code>CRIT-L5</code> license key for CritMail Desktop &amp; Agent HQ.
+      Reserve your <code>@theintelligenceagency.net</code> webmail address and unlock the Directorate Cybersecurity, Python &amp; IT Training Academy.
     </p>
     <form id="form-enlist">
       <div class="form-field">
@@ -425,8 +425,9 @@ SMTP Port     : 465 (SSL/TLS)</div>
       <div class="form-field">
         <label for="enlist-tier">CLEARANCE PLAN</label>
         <select id="enlist-tier" class="cyber-input">
-          <option value="OPERATIVE_MONTHLY">Level-5 Operative Pro ($4.99/mo — Instant Early-Access Activation)</option>
-          <option value="FOUNDER_LIFETIME">Station Chief Lifetime ($39.99 — Founder Activation)</option>
+          <option value="CADET_FREE">Cadet Free Access ($0 — Callsign + Academy Modules &amp; FOIA Vault)</option>
+          <option value="OPERATIVE_MONTHLY" selected>Level-5 Operative Pro ($4.99/mo — Full Webmail + Verifiable Certifications)</option>
+          <option value="FOUNDER_LIFETIME">Station Chief Lifetime ($39.99 — Permanent Callsign + All Certifications)</option>
         </select>
       </div>
       <div id="enlist-error" style="color:var(--accent-red); font-size:0.8rem; margin-bottom:0.65rem;"></div>
@@ -507,12 +508,11 @@ SMTP Port     : 465 (SSL/TLS)</div>
       <strong>THE INTELLIGENCE AGENCY (`theintelligenceagency.net`)</strong> • Engineered by <strong>Critical Softworks</strong>
     </div>
     <div style="margin-top:0.35rem;">
-      <a href="https://github.com/critmaths/crit-mail-client-releases" target="_blank" rel="noopener" style="color:var(--text-accent);">GitHub Releases</a> •
       <a href="https://github.com/sponsors/critmaths" target="_blank" rel="noopener" style="color:var(--text-accent);">Sponsor on GitHub</a> •
       <a href="https://patreon.com/omav" target="_blank" rel="noopener" style="color:var(--text-accent);">Support on Patreon</a>
     </div>
     <div style="margin-top:0.55rem; max-width:780px; margin-inline:auto; opacity:0.8;">
-      Safe-Harbor Notice: The Intelligence Agency (<code>theintelligenceagency.net</code>) and CritMail are an independent interactive cybersecurity, cryptography, and historical intelligence platform operated by Critical Softworks. Not affiliated with or endorsed by any U.S. government agency.
+      Safe-Harbor Notice: The Intelligence Agency (<code>theintelligenceagency.net</code>) is an independent interactive cybersecurity, programming, cryptography, and historical intelligence platform operated by Critical Softworks. Not affiliated with or endorsed by any U.S. government agency.
     </div>
   </footer>
 
