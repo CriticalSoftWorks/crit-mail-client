@@ -1,20 +1,25 @@
 # <p align="center"><img src="assets/critmail.png" alt="CritMail Logo" width="96" height="96" /><br>CritMail // SIGINT Communications Terminal</p>
 
 <p align="center">
-  <strong>Ultra-Fast • Hack-Proof • Winamp 3 Monospace & SIGINT Security Email Client for Windows</strong><br>
-  <em>Zero Rounded Corners. AES-256-GCM Classified Cipher. Hardware DPAPI Vault. Zero-JS Sandbox.</em>
+  <strong>Ultra-Fast • Hack-Proof • Winamp 3 Monospace & SIGINT Security Email Client for Windows, macOS & Linux</strong><br>
+  <em>Zero Rounded Corners. AES-256-GCM Classified Cipher. Hardware Vault. Zero-JS Sandbox.</em>
 </p>
 
 <p align="center">
-  <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest"><img src="https://img.shields.io/badge/Download-CritMail_v1.0.0_(Windows_x64)-00b4d8?style=for-the-badge&logo=windows&logoColor=white" alt="Download Latest Release" /></a>
+  <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest"><img src="https://img.shields.io/badge/Windows_x64-CritMail.exe-00b4d8?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" /></a>
+  <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest"><img src="https://img.shields.io/badge/macOS-CritMail.dmg-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS" /></a>
+  <a href="https://github.com/critmaths/crit-mail-client-releases/releases/latest"><img src="https://img.shields.io/badge/Linux_x64-CritMail.tar.gz-fcc624?style=for-the-badge&logo=linux&logoColor=black" alt="Download for Linux" /></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/sponsors/critmaths"><img src="https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?style=for-the-badge&logo=github&logoColor=white" alt="Sponsor on GitHub" /></a>
   <a href="https://patreon.com/omav"><img src="https://img.shields.io/badge/Patreon-Support_Project-f96854?style=for-the-badge&logo=patreon&logoColor=white" alt="Support on Patreon" /></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(64--bit)-0078D6?logo=windows" alt="Platform" />
+  <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux-0078D6" alt="Platforms" />
   <img src="https://img.shields.io/badge/Protocols-IMAP4%20(993)%20%7C%20POP3%20(995)%20%7C%20SMTP%20(465)-00e5ff" alt="Protocols" />
-  <img src="https://img.shields.io/badge/Encryption-Windows%20DPAPI%20%2B%20AES--256--GCM-00f076" alt="Encryption" />
+  <img src="https://img.shields.io/badge/Encryption-DPAPI%20%2B%20AES--256--GCM-00f076" alt="Encryption" />
   <img src="https://img.shields.io/badge/License-Field%20Agent%20Free%20%2F%20Level--5%20Pro-ffb300" alt="License" />
 </p>
 
@@ -42,11 +47,11 @@
 
 ## 🚀 Quick Download & Setup
 
-> **No Python or developer tools required.** CritMail ships as a self-contained portable Windows 64-bit executable (`CritMail.exe`).
+> **No Python or developer tools required.** CritMail ships as self-contained native builds for **Windows (`CritMail-v1.0.0-win64.exe`)**, **macOS (`CritMail-v1.0.0-macOS.dmg`)**, and **Linux (`CritMail-v1.0.0-linux-x64.tar.gz`)**.
 
-1. **[Download `CritMail.exe` from the Official Releases Page](https://github.com/critmaths/crit-mail-client-releases/releases/latest)**
-2. Launch `CritMail.exe`.
-3. Click **`[ ⚙ Accounts ]`** in the bottom-left sidebar (or `File -> Account Settings`), enter your mailbox credentials (stored locally via Windows DPAPI hardware encryption), and click **`⚡ Test Connection`**.
+1. **[Download CritMail for Windows, macOS, or Linux from the Official Releases Page](https://github.com/critmaths/crit-mail-client-releases/releases/latest)**
+2. Launch `CritMail` (`CritMail.exe` on Windows, `CritMail.app` on macOS, or `./CritMail` on Linux).
+3. Click **`[ ⚙ Accounts ]`** in the bottom-left sidebar (or `File -> Account Settings`), enter your mailbox credentials (encrypted locally via OS DPAPI / AES-256-GCM vault), and click **`⚡ Test Connection`**.
 4. Press **`F5`** or click **`[ ⟳ Sync Mail ]`** to synchronize your inbox!
 
 ---
@@ -84,9 +89,9 @@
 
 ## 💻 System Requirements
 
-- **Operating System:** Windows 10 or Windows 11 (64-bit)
+- **Operating System:** Windows 10/11 (64-bit), macOS 12+ (Apple Silicon & Intel), or Linux (x86_64)
 - **RAM:** ~65 MB typical footprint
-- **Storage:** Local SQLite WAL database + Windows DPAPI hardware vault (`~/.critmail`)
+- **Storage:** Local SQLite WAL database + Windows DPAPI / AES-256-GCM hardware vault (`~/.critmail`)
 
 ---
 

@@ -7,16 +7,18 @@ import base64
 import os
 import sys
 import ctypes
-from ctypes import wintypes
 from pathlib import Path
 from critmail.config import KEYSTORE_PATH
 
-# Windows DPAPI structures
-class DATA_BLOB(ctypes.Structure):
-    _fields_ = [
-        ("cbData", wintypes.DWORD),
-        ("pbData", ctypes.POINTER(ctypes.c_byte))
-    ]
+if sys.platform == "win32":
+    from ctypes import wintypes
+
+    # Windows DPAPI structures
+    class DATA_BLOB(ctypes.Structure):
+        _fields_ = [
+            ("cbData", wintypes.DWORD),
+            ("pbData", ctypes.POINTER(ctypes.c_byte))
+        ]
 
 def _win32_encrypt(plaintext: str) -> str:
     """Encrypts plaintext using Windows DPAPI (CryptProtectData)."""
