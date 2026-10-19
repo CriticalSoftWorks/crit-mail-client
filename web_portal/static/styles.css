@@ -541,3 +541,282 @@ details.academy-disclosure > summary::-webkit-details-marker {
   position: relative;
 }
 
+/* Course Progress Bar */
+.course-progress-wrap {
+  margin: 0.75rem 0 1rem 0;
+  background: #060d18;
+  border: 1px solid #162b47;
+  padding: 0.65rem 0.85rem;
+}
+
+.course-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+.course-progress-track {
+  width: 100%;
+  height: 8px;
+  background: #0b1829;
+  border: 1px solid #1b3659;
+  overflow: hidden;
+}
+
+.course-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--text-accent), var(--accent-green));
+  transition: width 0.35s ease;
+}
+
+/* Expandable Lesson Chapter Cards */
+details.lesson-disclosure {
+  background: #070e1a;
+  border: 1px solid #172d4a;
+  border-left: 3px solid var(--text-accent);
+  margin-top: 0.75rem;
+  transition: border-color 0.2s;
+}
+
+details.lesson-disclosure.lesson-done {
+  border-left-color: var(--accent-green);
+}
+
+details.lesson-disclosure[open] {
+  background: #081222;
+  border-color: #244773;
+}
+
+details.lesson-disclosure > summary {
+  padding: 0.75rem 0.95rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: #e6f1ff;
+  list-style: none;
+}
+
+details.lesson-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.lesson-body {
+  padding: 0.85rem 1rem 1rem 1rem;
+  border-top: 1px solid #142640;
+}
+
+.objectives-box {
+  background: rgba(0, 229, 255, 0.05);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.objectives-box ul {
+  margin: 0.35rem 0 0 1.15rem;
+  padding: 0;
+  font-size: 0.79rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.lesson-theory {
+  color: var(--text-primary);
+  font-size: 0.83rem;
+  line-height: 1.68;
+  white-space: pre-line;
+  margin-bottom: 0.85rem;
+}
+
+.checkpoint-box {
+  background: #0a172a;
+  border: 1px solid #1f3f66;
+  padding: 0.75rem 0.9rem;
+  margin-top: 0.85rem;
+}
+
+/* Interactive Cyber Range / Code Lab Terminal */
+.cyber-lab-box {
+  margin-top: 1.2rem;
+  background: #040911;
+  border: 1px solid var(--accent-green);
+  box-shadow: 0 0 20px rgba(0, 230, 118, 0.08);
+}
+
+.cyber-lab-header {
+  background: rgba(0, 230, 118, 0.1);
+  border-bottom: 1px solid rgba(0, 230, 118, 0.3);
+  padding: 0.65rem 0.95rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cyber-lab-body {
+  padding: 0.9rem 1rem;
+}
+
+.lab-cmd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.65rem 0;
+}
+
+.lab-chip {
+  background: #091929;
+  border: 1px solid #1e4268;
+  color: var(--text-accent);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lab-chip:hover {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: rgba(0, 230, 118, 0.08);
+}
+
+.lab-terminal-screen {
+  background: #02050a;
+  border: 1px solid #152c47;
+  color: #b8f2d0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 0.85rem;
+  min-height: 170px;
+  max-height: 320px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  margin-bottom: 0.65rem;
+}
+
+.lab-prompt-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Director Course Studio Styles */
+.btn-red {
+  background: rgba(255, 23, 68, 0.15);
+  border: 1px solid var(--accent-red);
+  color: #ff5252;
+}
+
+.btn-red:hover {
+  background: rgba(255, 23, 68, 0.35);
+  color: #ffffff;
+}
+
+.studio-lesson-card {
+  background: #060e1b;
+  border: 1px solid #163254;
+  border-left: 3px solid var(--text-accent);
+  padding: 0.85rem;
+  transition: border-color 0.2s;
+}
+
+.studio-lesson-card:hover {
+  border-color: #25538a;
+}
+
+.studio-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.studio-cmd-row {
+  background: #030811;
+  border: 1px solid #142e22;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.studio-exam-card {
+  background: #060e1b;
+  border: 1px solid #1b385c;
+  border-left: 3px solid var(--accent-amber);
+  padding: 0.85rem;
+}
+
+.studio-opt-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+/* ===== 4-Column Grid & Tier Cards ===== */
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+}
+@media (max-width: 900px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .grid-4 { grid-template-columns: 1fr; }
+}
+
+.tier-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 2px;
+  padding: 0.85rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.tier-card:hover {
+  border-color: var(--text-accent) !important;
+  box-shadow: 0 0 14px rgba(0, 195, 255, 0.12);
+}
+.tier-card .tier-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-accent);
+}
+.tier-card .tier-price {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+}
+.tier-card .tier-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  flex: 1;
+  line-height: 1.45;
+}
+.tier-card .btn {
+  margin-top: auto;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  text-align: center;
+}
+
+
+

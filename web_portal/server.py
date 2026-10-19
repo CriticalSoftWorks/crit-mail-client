@@ -18,6 +18,9 @@ import hashlib
 import secrets
 import sqlite3
 import smtplib
+import base64
+import urllib.request
+import urllib.parse
 from email.message import EmailMessage
 from datetime import datetime, timezone
 from pathlib import Path
@@ -184,355 +187,63 @@ FOIA_DOSSIERS = [
     }
 ]
 
-ACADEMY_COURSES = [
-    {
-        "id": "acad-101",
-        "code": "ACAD-101",
-        "division": "DIVISION 01 // NETWORK & COMMS ENGINEERING",
-        "title": "Network Protocols, DNS Authentication & Email Security Engineering",
-        "credential_title": "Certified SIGINT Communications Specialist (CSCS)",
-        "ceu_credits": "3.0 CEU Credits (NIST NICE: Protect & Defend)",
-        "xp": 750,
-        "summary": (
-            "Master the real-world internet protocols that power global email and secure communications: "
-            "SMTP, IMAP4, implicit TLS 1.3 (RFC 8314), and the cryptographic DNS authentication triad (SPF, RSA-2048 DKIM, and DMARC)."
-        ),
-        "modules": [
-            {
-                "title": "Module 1.1: The Anatomy of Internet Mail (SMTP, IMAP4 & Implicit TLS 1.3)",
-                "content": (
-                    "Every email crosses multiple network boundaries. Legacy plaintext ports (25, 110, 143) are vulnerable to passive "
-                    "wiretapping and STARTTLS downgrade attacks (STRIPTLS). Modern RFC 8314 mandates Implicit TLS from the very first byte: "
-                    "Port 465 for SMTP Submission and Port 993 for IMAP4 mailbox synchronization."
-                ),
-                "code_sample": (
-                    "# Verify Implicit TLS 1.3 Handshake on Port 465\n"
-                    "openssl s_client -connect email-smtp.us-east-1.amazonaws.com:465 -tls1_3"
-                )
-            },
-            {
-                "title": "Module 1.2: Cryptographic DNS Triad (SPF, RSA-2048 DKIM & DMARC)",
-                "content": (
-                    "1. SPF (Sender Policy Framework): Publishes authorized outbound IPv4/IPv6 ranges in a DNS TXT record (v=spf1).\n"
-                    "2. DKIM (DomainKeys Identified Mail): Signs the message headers and body hash with the sender's private RSA-2048 key; "
-                    "receiving servers verify the signature via the public key at <selector>._domainkey.<domain>.\n"
-                    "3. DMARC (Domain-based Message Authentication, Reporting, and Conformance): Enforces alignment and instructs receivers "
-                    "to 'quarantine' or 'reject' unauthenticated messages."
-                ),
-                "code_sample": (
-                    "_dmarc.theintelligenceagency.net. IN TXT \"v=DMARC1; p=quarantine; rua=mailto:postmaster@theintelligenceagency.net\""
-                )
-            },
-            {
-                "title": "Module 1.3: SMTP Header Forensics & Detecting Relay Spoofing",
-                "content": (
-                    "Because the display 'From:' header can be forged by any sender, forensic analysts read 'Received:' headers from TOP to BOTTOM "
-                    "(most recent hop at the top) and verify the 'Authentication-Results:' header produced by their own trusted MX server."
-                ),
-                "code_sample": (
-                    "Authentication-Results: mx.google.com;\n"
-                    "  dkim=pass header.i=@theintelligenceagency.net header.s=ses;\n"
-                    "  spf=pass (google.com: domain of bounce.theintelligenceagency.net designates 54.240.8.1 as permitted sender)"
-                )
-            }
-        ],
-        "exam": [
-            {
-                "q_id": "q1",
-                "question": "1. Which DNS authentication standard cryptographically signs outbound email headers and body hashes using an asymmetric public/private keypair?",
-                "options": [
-                    {"value": "SPF", "label": "SPF (Sender Policy Framework)"},
-                    {"value": "DKIM", "label": "DKIM (DomainKeys Identified Mail)"},
-                    {"value": "PTR", "label": "Reverse PTR DNS Record"},
-                    {"value": "STARTTLS", "label": "Opportunistic STARTTLS"}
-                ],
-                "answer": "DKIM"
-            },
-            {
-                "q_id": "q2",
-                "question": "2. According to RFC 8314, which port is designated for Implicit TLS/SSL outbound SMTP message submission?",
-                "options": [
-                    {"value": "25", "label": "Port 25 (Plaintext Relay)"},
-                    {"value": "110", "label": "Port 110 (POP3)"},
-                    {"value": "465", "label": "Port 465 (Implicit TLS Submission)"},
-                    {"value": "8080", "label": "Port 8080 (HTTP Proxy)"}
-                ],
-                "answer": "465"
-            },
-            {
-                "q_id": "q3",
-                "question": "3. When inspecting raw email headers for spoofing, which header chain is added hop-by-hop from bottom (earliest) to top (most recent)?",
-                "options": [
-                    {"value": "RECEIVED", "label": "Received: headers"},
-                    {"value": "REPLY-TO", "label": "Reply-To: headers"},
-                    {"value": "SUBJECT", "label": "Subject: headers"},
-                    {"value": "X-MAILER", "label": "X-Mailer: headers"}
-                ],
-                "answer": "RECEIVED"
-            }
-        ]
-    },
-    {
-        "id": "acad-201",
-        "code": "ACAD-201",
-        "division": "DIVISION 02 // APPLIED CRYPTOGRAPHY & PYTHON",
-        "title": "Applied Cryptography, Key Derivation & Python Security Automation",
-        "credential_title": "Certified Cryptographic Python Analyst (CCPA)",
-        "ceu_credits": "4.0 CEU Credits (NIST NICE: Design & Development)",
-        "xp": 1000,
-        "summary": (
-            "Learn how modern authenticated encryption (AES-256-GCM), password key stretching (PBKDF2-HMAC-SHA256), "
-            "constant-time HMAC verification, and Python cryptographic scripting protect classified payloads."
-        ),
-        "modules": [
-            {
-                "title": "Module 2.1: Authenticated Encryption with Associated Data (AES-256-GCM)",
-                "content": (
-                    "Unauthenticated block modes like AES-ECB or raw AES-CBC are vulnerable to pattern leakage and padding oracle attacks. "
-                    "AES-256-GCM (Galois/Counter Mode) combines a 256-bit key, a unique 96-bit (12-byte) Nonce/IV, and a 128-bit Authentication Tag "
-                    "that guarantees both confidentiality and tamper-proof integrity."
-                ),
-                "code_sample": (
-                    "from cryptography.hazmat.primitives.ciphers.aead import AESGCM\n"
-                    "import os\n"
-                    "nonce = os.urandom(12)  # 96-bit unique nonce\n"
-                    "ciphertext = AESGCM(key_32_bytes).encrypt(nonce, b'TOP SECRET PAYLOAD', None)"
-                )
-            },
-            {
-                "title": "Module 2.2: Password Key Stretching (PBKDF2-HMAC-SHA256 & Random Salts)",
-                "content": (
-                    "Human passphrases do not have 256 bits of uniform entropy. To derive an AES-256 key or store a password hash safely, "
-                    "we combine a unique 16-byte cryptographic salt (which defeats precomputed Rainbow Tables) with 150,000+ iterations "
-                    "of PBKDF2-HMAC-SHA256 to slow down GPU brute-force attacks."
-                ),
-                "code_sample": (
-                    "import hashlib, secrets\n"
-                    "salt = secrets.token_bytes(16)\n"
-                    "derived_key = hashlib.pbkdf2_hmac('sha256', passphrase.encode(), salt, 200_000)"
-                )
-            },
-            {
-                "title": "Module 2.3: Timing Side-Channels & Python's 'secrets' and 'hmac' Modules",
-                "content": (
-                    "Never use Python's standard 'random' module (Mersenne Twister) for security tokens—its state can be predicted after observing "
-                    "624 outputs. Always use 'secrets' (OS CSPRNG) and compare hashes with 'hmac.compare_digest()' to prevent timing attacks."
-                ),
-                "code_sample": (
-                    "import hmac, secrets\n"
-                    "token = secrets.token_urlsafe(32)\n"
-                    "is_valid = hmac.compare_digest(user_mac, expected_mac)"
-                )
-            }
-        ],
-        "exam": [
-            {
-                "q_id": "q1",
-                "question": "1. What critical security property does AES-256-GCM provide in addition to confidentiality via its 128-bit GCM Tag?",
-                "options": [
-                    {"value": "COMPRESSION", "label": "Lossless payload compression"},
-                    {"value": "INTEGRITY", "label": "Authenticated integrity / tamper detection"},
-                    {"value": "DNS_ROUTING", "label": "Automatic MX DNS routing"},
-                    {"value": "KEY_ESCROW", "label": "Third-party key escrow"}
-                ],
-                "answer": "INTEGRITY"
-            },
-            {
-                "q_id": "q2",
-                "question": "2. Which Python standard library module is backed by the OS CSPRNG and must be used instead of 'random' for security tokens?",
-                "options": [
-                    {"value": "MATH", "label": "math"},
-                    {"value": "SECRETS", "label": "secrets"},
-                    {"value": "ITERTOOLS", "label": "itertools"},
-                    {"value": "PICKLE", "label": "pickle"}
-                ],
-                "answer": "SECRETS"
-            },
-            {
-                "q_id": "q3",
-                "question": "3. What is the primary role of a unique 16-byte random salt in PBKDF2-HMAC-SHA256?",
-                "options": [
-                    {"value": "RAINBOW", "label": "Defeats precomputed Rainbow Table lookups and identical hash collisions"},
-                    {"value": "SHORTEN", "label": "Shortens the output hash to 8 bits"},
-                    {"value": "PLAIN", "label": "Allows the server to recover the plaintext password"},
-                    {"value": "COMPRESS", "label": "Compresses large attachments"}
-                ],
-                "answer": "RAINBOW"
-            }
-        ]
-    },
-    {
-        "id": "acad-301",
-        "code": "ACAD-301",
-        "division": "DIVISION 03 // SOC THREAT HUNTING & COUNTER-INTEL",
-        "title": "SOC Threat Hunting, Counter-Phishing & OSINT Reconnaissance",
-        "credential_title": "Cyber Counter-Intelligence Operator (CCIO)",
-        "ceu_credits": "3.5 CEU Credits (NIST NICE: Analyze & Investigate)",
-        "xp": 900,
-        "summary": (
-            "Neutralize tracking beacons, dissect IDN Punycode homograph attacks, analyze malicious payloads without executing scripts, "
-            "and execute structured NIST SP 800-61 incident response workflows."
-        ),
-        "modules": [
-            {
-                "title": "Module 3.1: Zero-Click Tracking Pixels & Telemetry Neutralization",
-                "content": (
-                    "Marketing trackers and spear-phishing campaigns embed invisible 1x1 remote images (<img src='https://tracker.example/open?id=992'>). "
-                    "When a standard mail client auto-loads remote images, it leaks your public IP address, geolocation, OS/User-Agent, and exact read timestamp. "
-                    "CritMail intercepts and strips remote image loads by default."
-                ),
-                "code_sample": (
-                    "# Blocked by CritMail Tracker Shield:\n"
-                    "<img src=\"https://telemetry.hostile.example/pixel.gif?uid=target\" width=\"1\" height=\"1\" />"
-                )
-            },
-            {
-                "title": "Module 3.2: IDN Homograph Attacks (Punycode 'xn--') & Link Guard",
-                "content": (
-                    "Attackers register Internationalized Domain Names (IDNs) using Cyrillic or Greek characters that look identical to Latin letters "
-                    "(e.g., Cyrillic 'а' U+0430 instead of Latin 'a' U+0061). Under the hood, DNS encodes these domains using the ASCII Punycode prefix 'xn--'."
-                ),
-                "code_sample": (
-                    "Visual Display : https://аpple.com/login (Cyrillic 'а')\n"
-                    "Actual DNS Name: https://xn--pple-43d.com/login"
-                )
-            },
-            {
-                "title": "Module 3.3: NIST SP 800-61 Incident Response Lifecycle",
-                "content": (
-                    "Professional Security Operations Centers (SOCs) follow four structured phases under NIST SP 800-61:\n"
-                    "1. Preparation -> 2. Detection & Analysis -> 3. Containment, Eradication & Recovery -> 4. Post-Incident Activity."
-                ),
-                "code_sample": (
-                    "Phase 1: Preparation\n"
-                    "Phase 2: Detection & Analysis\n"
-                    "Phase 3: Containment, Eradication & Recovery\n"
-                    "Phase 4: Post-Incident Activity (Lessons Learned)"
-                )
-            }
-        ],
-        "exam": [
-            {
-                "q_id": "q1",
-                "question": "1. What ASCII prefix identifies an Internationalized Domain Name (Punycode) often abused in homograph phishing attacks?",
-                "options": [
-                    {"value": "XN--", "label": "xn--"},
-                    {"value": "TLS--", "label": "tls--"},
-                    {"value": "UTF8--", "label": "utf8--"},
-                    {"value": "DNS--", "label": "dns--"}
-                ],
-                "answer": "XN--"
-            },
-            {
-                "q_id": "q2",
-                "question": "2. How does an embedded 1x1 tracking pixel reveal a recipient's IP address and read time when an HTML email is opened?",
-                "options": [
-                    {"value": "HTTP_REQ", "label": "The client makes an outbound HTTP/HTTPS GET request to fetch the remote image URL"},
-                    {"value": "BLUETOOTH", "label": "It scans local Bluetooth devices"},
-                    {"value": "BIOS", "label": "It modifies the system BIOS"},
-                    {"value": "ICMP", "label": "It sends an ICMP ping flood"}
-                ],
-                "answer": "HTTP_REQ"
-            },
-            {
-                "q_id": "q3",
-                "question": "3. In the NIST SP 800-61 Incident Response lifecycle, which phase immediately follows 'Detection & Analysis'?",
-                "options": [
-                    {"value": "CONTAINMENT", "label": "Containment, Eradication & Recovery"},
-                    {"value": "MARKETING", "label": "Public Marketing Disclosure"},
-                    {"value": "DELETION", "label": "Hard Drive Formatting"},
-                    {"value": "PROCUREMENT", "label": "Vendor Procurement"}
-                ],
-                "answer": "CONTAINMENT"
-            }
-        ]
-    },
-    {
-        "id": "acad-401",
-        "code": "ACAD-401",
-        "division": "DIVISION 04 // SECURE INFRASTRUCTURE & SYSTEMS",
-        "title": "Linux Hardening, SQL Injection Defense & Zero-Trust API Engineering",
-        "credential_title": "Directorate Security & Infrastructure Engineer (DSIE)",
-        "ceu_credits": "4.5 CEU Credits (NIST NICE: Operate & Maintain)",
-        "xp": 1200,
-        "summary": (
-            "Build and harden production Linux servers, eliminate SQL Injection via parameterized queries, "
-            "lock down SSH keys, and enforce HTTP Strict-Transport-Security (HSTS)."
-        ),
-        "modules": [
-            {
-                "title": "Module 4.1: Eliminating SQL Injection (SQLi) with Parameterized Queries",
-                "content": (
-                    "Formatting user input directly into SQL strings via f-strings or concatenation allows attackers to inject \"' OR 1=1 --\" "
-                    "and dump or destroy tables. Parameterized queries (?) separate the SQL command structure from the literal data parameters."
-                ),
-                "code_sample": (
-                    "# VULNERABLE (Never do this):\n"
-                    "# cursor.execute(f\"SELECT * FROM agents WHERE callsign = '{user_input}'\")\n\n"
-                    "# SECURE (Parameterized Query):\n"
-                    "cursor.execute(\"SELECT * FROM agents WHERE callsign = ?\", (user_input,))"
-                )
-            },
-            {
-                "title": "Module 4.2: Linux SSH Key Permissions & Least-Privilege Services",
-                "content": (
-                    "OpenSSH refuses to use private key files (.pem / id_ed25519) if other system users can read them. "
-                    "Setting 'chmod 400' (r--------) ensures only the file owner has read access. Production daemons should run under dedicated "
-                    "non-root systemd accounts."
-                ),
-                "code_sample": (
-                    "chmod 400 ~/.ssh/id_ed25519\n"
-                    "ssh -i ~/.ssh/id_ed25519 operative@184.193.61.45"
-                )
-            },
-            {
-                "title": "Module 4.3: Transport Layer Hardening & HSTS",
-                "content": (
-                    "Even when a server supports HTTPS on Port 443, a user typing a domain name without 'https://' initially makes a plaintext HTTP request. "
-                    "The 'Strict-Transport-Security' (HSTS) header instructs browsers to automatically upgrade all future connections to HTTPS."
-                ),
-                "code_sample": (
-                    "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload"
-                )
-            }
-        ],
-        "exam": [
-            {
-                "q_id": "q1",
-                "question": "1. What is the primary defense against SQL Injection (SQLi) when executing database queries in Python?",
-                "options": [
-                    {"value": "PARAMETERIZED", "label": "Parameterized queries (bound placeholders '?')"},
-                    {"value": "BASE64", "label": "Base64 encoding the SQL string"},
-                    {"value": "UPPERCASE", "label": "Converting all inputs to uppercase"},
-                    {"value": "REGEX", "label": "Removing spaces with regex"}
-                ],
-                "answer": "PARAMETERIZED"
-            },
-            {
-                "q_id": "q2",
-                "question": "2. Which Linux octal permission mode restricts an SSH private key file to read-only for its owner and no permissions for group/others?",
-                "options": [
-                    {"value": "777", "label": "chmod 777 (rwxrwxrwx)"},
-                    {"value": "666", "label": "chmod 666 (rw-rw-rw-)"},
-                    {"value": "400", "label": "chmod 400 (r--------)"},
-                    {"value": "755", "label": "chmod 755 (rwxr-xr-x)"}
-                ],
-                "answer": "400"
-            },
-            {
-                "q_id": "q3",
-                "question": "3. Which HTTP security response header instructs browsers to strictly connect to a domain only over HTTPS?",
-                "options": [
-                    {"value": "HSTS", "label": "Strict-Transport-Security (HSTS)"},
-                    {"value": "ACCEPT", "label": "Accept-Encoding"},
-                    {"value": "USER_AGENT", "label": "User-Agent"},
-                    {"value": "CACHE", "label": "Cache-Control"}
-                ],
-                "answer": "HSTS"
-            }
-        ]
-    }
-]
+try:
+    from web_portal.academy_curriculum import ACADEMY_COURSES, execute_lab_command
+except ImportError:
+    from academy_curriculum import ACADEMY_COURSES, execute_lab_command
+
+
+def _sanitize_course_for_client(course: dict, completed_lesson_ids: set = None, earned_cert: dict = None, agent_tier: str = "OPERATIVE_PRO") -> dict:
+    completed_lesson_ids = completed_lesson_ids or set()
+    c_copy = dict(course)
+    modules_out = []
+    free_count = int(course.get("free_preview_count") or 2)
+    is_cadet = agent_tier == "CADET_FREE"
+
+    for idx, m in enumerate(course.get("modules", []), start=1):
+        lesson_id = m.get("lesson_id") or f"{course['id']}-m{idx}"
+        is_locked = is_cadet and (idx > free_count)
+        m_copy = {
+            "lesson_id": lesson_id,
+            "title": m.get("title", ""),
+            "duration": m.get("duration", "20 min"),
+            "objectives": m.get("objectives", []),
+            "content": m.get("content", ""),
+            "code_sample": m.get("code_sample", ""),
+            "checkpoint_q": m.get("checkpoint_q", ""),
+            "checkpoint_hint": m.get("checkpoint_hint", ""),
+            "completed": (lesson_id in completed_lesson_ids) or (earned_cert is not None),
+            "is_locked": is_locked
+        }
+        modules_out.append(m_copy)
+
+    c_copy["modules"] = modules_out
+    c_copy["free_preview_count"] = free_count
+    c_copy["exam_locked"] = is_cadet
+    total_lessons = len(modules_out)
+    done_lessons = sum(1 for m in modules_out if m["completed"])
+    c_copy["total_lessons"] = total_lessons
+    c_copy["completed_lessons"] = done_lessons
+    c_copy["progress_pct"] = int(round((done_lessons / total_lessons) * 100)) if total_lessons else 0
+
+    lab = course.get("lab")
+    if lab:
+        c_copy["lab"] = {
+            "lab_id": lab.get("lab_id", ""),
+            "title": lab.get("title", ""),
+            "scenario": lab.get("scenario", ""),
+            "suggested_commands": lab.get("suggested_commands", []),
+            "flag_hint": lab.get("flag_hint", "")
+        }
+
+    c_copy["exam"] = [
+        {"q_id": q["q_id"], "question": q["question"], "options": q["options"]}
+        for q in course.get("exam", [])
+    ]
+    c_copy["completed"] = earned_cert is not None
+    c_copy["certificate"] = earned_cert
+    return c_copy
+
 
 
 def get_db() -> sqlite3.Connection:
@@ -542,11 +253,272 @@ def get_db() -> sqlite3.Connection:
     return conn
 
 
+def get_all_courses(include_unpublished: bool = False) -> list[dict]:
+    try:
+        conn = get_db()
+        query = (
+            "SELECT * FROM courses ORDER BY rowid ASC"
+            if include_unpublished
+            else "SELECT * FROM courses WHERE is_published = 1 ORDER BY rowid ASC"
+        )
+        rows = conn.execute(query).fetchall()
+        courses = []
+        for r in rows:
+            c_dict = {
+                "id": r["id"],
+                "code": r["code"],
+                "division": r["division"],
+                "title": r["title"],
+                "credential_title": r["credential_title"],
+                "ceu_credits": r["ceu_credits"],
+                "xp": int(r["xp"]),
+                "estimated_duration": r["estimated_duration"] or "3.0 Hours",
+                "summary": r["summary"],
+                "modules": json.loads(r["modules_json"]) if r["modules_json"] else [],
+                "lab": json.loads(r["lab_json"]) if r["lab_json"] else {},
+                "exam": json.loads(r["exam_json"]) if r["exam_json"] else [],
+                "is_published": int(r["is_published"]),
+                "free_preview_count": int(r["free_preview_count"]) if "free_preview_count" in r.keys() and r["free_preview_count"] is not None else 2,
+                "created_at": r["created_at"],
+                "updated_at": r["updated_at"]
+            }
+            courses.append(c_dict)
+        conn.close()
+        if courses:
+            return courses
+    except Exception as e:
+        print(f"[COURSES DB ERROR] {e}")
+    return list(ACADEMY_COURSES)
+
+
+def get_course_by_id(course_id: str) -> dict | None:
+    cid = (course_id or "").strip().lower()
+    courses = get_all_courses(include_unpublished=True)
+    return next(
+        (c for c in courses if c["id"].lower() == cid or c["code"].lower() == cid),
+        None
+    )
+
+
+def run_course_lab_command(course_id: str, raw_cmd: str) -> dict:
+    course = get_course_by_id(course_id)
+    cmd_clean = " ".join(raw_cmd.strip().split())
+    if course and course.get("lab"):
+        custom_map = (course["lab"] or {}).get("custom_commands", {})
+        for k, v in custom_map.items():
+            if k.strip().lower() == cmd_clean.lower():
+                return {"ok": True, "command": raw_cmd, "output": v}
+    try:
+        return execute_lab_command(course_id, raw_cmd)
+    except Exception:
+        return {
+            "ok": True,
+            "command": raw_cmd,
+            "output": f"operative@sigint-lab:~$ {cmd_clean}\n[EXEC] Command completed in simulated range environment. Type 'help' for options."
+        }
+
+
+def generate_course_template_from_material(topic: str, raw_material: str = "", division: str = "", code: str = "") -> dict:
+    clean_topic = topic.strip() or "Advanced Cybersecurity & Cyber Defense"
+    clean_code = code.strip().upper() if code.strip() else f"ACAD-{secrets.randbelow(400) + 500}"
+    course_id = clean_code.lower()
+    clean_div = division.strip() if division.strip() else "DIVISION 05 // ADVANCED APPLIED SECURITY"
+
+    snippets = [line.strip() for line in raw_material.split("\n") if len(line.strip()) > 30]
+    s1 = snippets[0] if len(snippets) > 0 else f"Comprehensive architectural foundations of {clean_topic}."
+    s2 = snippets[1] if len(snippets) > 1 else f"Offensive threat modeling, vulnerability discovery and exploit mechanics in {clean_topic}."
+    s3 = snippets[2] if len(snippets) > 2 else f"Defensive engineering, cryptographic mitigation, and real-time incident triage for {clean_topic}."
+    s4 = snippets[3] if len(snippets) > 3 else f"Zero-trust integration, automated logging, and policy enforcement under NIST guidelines."
+    s5 = snippets[4] if len(snippets) > 4 else f"Operational case studies, live threat hunting, and intelligence synthesis."
+
+    modules = [
+        {
+            "lesson_id": f"{course_id}-m1",
+            "title": f"Lesson 1.1: Core Architecture & Theoretical Foundations",
+            "duration": "30 min",
+            "objectives": [
+                f"Deconstruct the protocol/system architecture of {clean_topic}.",
+                "Analyze trust boundaries, cryptographic invariants, and threat models.",
+                "Identify common misconfigurations and attack surfaces."
+            ],
+            "content": f"{s1}\n\nWhen architecting systems for {clean_topic}, practitioners must strictly establish zero-trust assumptions. Communication channels must enforce authenticated transport encryption, principle of least privilege, and non-repudiation.",
+            "code_sample": f"# Operational Verification Script for {clean_topic}\nimport sys, os\nprint('[INFO] Verifying security posture and cryptographic bounds...')\n# Check security state\nassert os.path.exists('/etc/security'), 'Configuration missing'",
+            "checkpoint_q": f"What core security property ensures that transmitted data in {clean_topic} cannot be read by unauthorized intermediaries?",
+            "checkpoint_answer": "Confidentiality",
+            "checkpoint_hint": "One of the primary CIA triad pillars (Confidentiality, Integrity, Availability)."
+        },
+        {
+            "lesson_id": f"{course_id}-m2",
+            "title": f"Lesson 1.2: Threat Vectors, Vulnerability Discovery & Exploitation",
+            "duration": "35 min",
+            "objectives": [
+                f"Examine active adversary tactics targeting {clean_topic}.",
+                "Simulate downgrade, injection, or timing side-channel attacks.",
+                "Document vulnerability findings using standard CVSS scoring."
+            ],
+            "content": f"{s2}\n\nAdversaries exploit parsing differentials, improper input sanitization, and weak entropy sources. In this lesson, we dissect real-world CVE disclosures and inspect malicious payloads.",
+            "code_sample": "# Vulnerability Triage Snippet\ndef audit_payload(raw_input: bytes) -> bool:\n    # Detect dangerous format strings or unsanitized metachars\n    dangerous = [b'../', b';', b'|', b'--']\n    return not any(pattern in raw_input for pattern in dangerous)",
+            "checkpoint_q": "Which standard scoring system provides a numerical representation of vulnerability severity (from 0.0 to 10.0)?",
+            "checkpoint_answer": "CVSS",
+            "checkpoint_hint": "Four letters: Common Vulnerability Scoring System."
+        },
+        {
+            "lesson_id": f"{course_id}-m3",
+            "title": f"Lesson 1.3: Cryptographic Mitigations & Defensive Hardening",
+            "duration": "40 min",
+            "objectives": [
+                "Implement robust authenticated encryption and key derivation.",
+                "Enforce strict input parameterization to eliminate injection attacks.",
+                "Configure hardened security response headers and policy enforcement."
+            ],
+            "content": f"{s3}\n\nRemediation requires structural defense-in-depth: moving from vulnerable string interpolation to bound placeholders, replacing weak pseudorandom number generators with OS-backed CSPRNGs, and deploying constant-time comparisons.",
+            "code_sample": "import hmac, hashlib\n# Constant-time MAC comparison prevents timing leakage\ndef verify_auth_token(user_token: str, expected_token: str) -> bool:\n    return hmac.compare_digest(user_token.encode(), expected_token.encode())",
+            "checkpoint_q": "Which Python function performs timing-attack resistant comparison between two cryptographic secrets?",
+            "checkpoint_answer": "compare_digest",
+            "checkpoint_hint": "Part of the 'hmac' module: hmac.compare_digest()."
+        },
+        {
+            "lesson_id": f"{course_id}-m4",
+            "title": f"Lesson 1.4: Zero-Trust Logging, Telemetry & Incident Response",
+            "duration": "30 min",
+            "objectives": [
+                "Deploy structured audit logging without exposing sensitive PII.",
+                "Construct NIST SP 800-61 incident response containment playbooks.",
+                "Integrate SIEM alerting rules for anomalous telemetry."
+            ],
+            "content": f"{s4}\n\nAuditing and telemetry must be tamper-proof. Write-ahead logging, remote syslog replication over mutual TLS, and automated anomaly containment prevent adversaries from clearing system tracks.",
+            "code_sample": "# SIEM Alert Rule Structure (JSON-Lines Telemetry)\n{\"timestamp\": \"2026-10-19T10:00:00Z\", \"event\": \"AUTH_ANOMALY\", \"severity\": \"HIGH\", \"action\": \"CONTAIN_SESSION\"}",
+            "checkpoint_q": "In NIST SP 800-61, which phase immediately follows 'Detection & Analysis' during an active breach?",
+            "checkpoint_answer": "Containment",
+            "checkpoint_hint": "Stopping the attacker from spreading: Containment, Eradication & Recovery."
+        },
+        {
+            "lesson_id": f"{course_id}-m5",
+            "title": f"Lesson 1.5: Field Intelligence Synthesis & Threat Hunting Capstone",
+            "duration": "45 min",
+            "objectives": [
+                "Synthesize intelligence observables into actionable defense signatures.",
+                "Execute live threat-hunting queries across network and host endpoints.",
+                "Prepare technical briefings aligned with executive and regulatory standards."
+            ],
+            "content": f"{s5}\n\nTrue cyber mastery requires synthesizing technical diagnostics into strategic decision-making. Operatives must be capable of isolating hostile actors, auditing configurations, and certifying system integrity.",
+            "code_sample": "# Threat Hunting Query (Simulated)\nSELECT parent_process, process_name, command_line FROM host_telemetry\nWHERE command_line LIKE '%FLAG{%' OR is_elevated = 1;",
+            "checkpoint_q": "What term describes structured technical evidence (such as hashes, domain names, or IP addresses) of an intrusion?",
+            "checkpoint_answer": "IOC",
+            "checkpoint_hint": "Three letters: Indicator of Compromise (IOC)."
+        }
+    ]
+
+    flag_val = f"FLAG{{TIA_{clean_code.replace('-', '_')}_{secrets.token_hex(4).upper()}}}"
+    lab = {
+        "lab_id": f"lab-{course_id}",
+        "title": f"Interactive Cyber Range Lab: Operation {clean_topic.upper()[:24]}",
+        "scenario": f"A compromised terminal node has exhibited unauthorized activity related to {clean_topic}. As the lead SIGINT cyber operative, execute live forensic and diagnostic commands in the simulated range environment to neutralize the threat and capture the verification flag.",
+        "flag": flag_val,
+        "flag_hint": "Run diagnostic commands like 'audit', 'scan', and 'extract-flag' in the terminal below.",
+        "suggested_commands": ["help", "status", "scan-host", "audit-policy", "extract-flag"],
+        "custom_commands": {
+            "help": "SIGINT DIAGNOSTIC TOOLKIT // AVAILABLE COMMANDS:\n  status        - Inspect current system and defensive posture\n  scan-host     - Run deep network & process vulnerability audit\n  audit-policy  - Verify zero-trust policy enforcement\n  extract-flag  - Recover verified operative CTF course flag\n  clear         - Reset terminal display",
+            "status": f"=== SYSTEM INTEGRITY REPORT // {clean_code} ===\nTarget Environment : {clean_topic}\nDefensive Posture  : MONITORED // LEVEL-5 CLEARANCE ACTIVE\nVulnerability Scan : 1 Anomalous Process Detected on Port 8443\nStatus Code        : DEFCON-3",
+            "scan-host": "=== HOST RECONNAISSANCE SCAN ===\n[+] Checking open listening sockets...\n    TCP 127.0.0.1:443   (TLS 1.3 / Authenticated)\n    TCP 127.0.0.1:8443  (UNAUTHORIZED DAEMON / PID 4192)\n[!] Found anomalous payload in /tmp/intercept.bin\n[+] Run 'audit-policy' to verify remediation controls.",
+            "audit-policy": "=== ZERO-TRUST POLICY AUDIT ===\n[+] Cryptographic Assertions: PASS (256-bit Keying Verified)\n[+] File Permissions       : PASS (0400 Read-Only)\n[+] Transport Security     : PASS (TLS 1.3 Strict Enforced)\n[+] Sandboxing             : ISOLATED\nRemediation successful! You may now run 'extract-flag'.",
+            "extract-flag": f"=== PRACTICAL LAB FLAG RECOVERED ===\nVerification Authority : The Intelligence Agency Directorate\nTrack Assessment       : {clean_code} — {clean_topic}\nPractical Lab Flag     :\n--------------------------------------------------\n  {flag_val}\n--------------------------------------------------\nCopy the flag above or inspect the exam section below."
+        }
+    }
+
+    exam = [
+        {
+            "q_id": "q1",
+            "question": f"1. What is the primary objective of establishing zero-trust architecture in {clean_topic}?",
+            "options": [
+                {"value": "VERIFY", "label": "Never trust, always verify every access request regardless of perimeter"},
+                {"value": "DEFAULT_ALLOW", "label": "Grant default administrator access to all users"},
+                {"value": "DISABLE_AUTH", "label": "Disable multi-factor authentication"},
+                {"value": "PLAINTEXT", "label": "Transmit operational telemetry in plaintext"}
+            ],
+            "answer": "VERIFY"
+        },
+        {
+            "q_id": "q2",
+            "question": "2. Which defense prevents timing side-channel attacks during cryptographic hash verification in Python?",
+            "options": [
+                {"value": "COMPARE_DIGEST", "label": "Using hmac.compare_digest() for constant-time comparison"},
+                {"value": "DOUBLE_EQUAL", "label": "Standard string equality '=='"},
+                {"value": "UPPERCASE", "label": "Converting both strings to uppercase"},
+                {"value": "LEN", "label": "Comparing string lengths only"}
+            ],
+            "answer": "COMPARE_DIGEST"
+        },
+        {
+            "q_id": "q3",
+            "question": "3. What is the primary role of bound parameter placeholders ('?') in SQL queries?",
+            "options": [
+                {"value": "PREVENT_SQLI", "label": "Separates SQL command structure from user data to eliminate SQL Injection"},
+                {"value": "FASTER_NET", "label": "Compresses network packets across routers"},
+                {"value": "ENCRYPT_DISK", "label": "Encrypts the entire physical disk drive"},
+                {"value": "AUTO_BACKUP", "label": "Automatically schedules weekly backups"}
+            ],
+            "answer": "PREVENT_SQLI"
+        },
+        {
+            "q_id": "q4",
+            "question": "4. According to NIST SP 800-61, what is the critical initial phase of the incident response lifecycle?",
+            "options": [
+                {"value": "PREPARATION", "label": "Preparation (Policies, tools, training & telemetry)"},
+                {"value": "PANIC", "label": "Immediate server power disconnection"},
+                {"value": "MARKETING", "label": "Social media disclosure"},
+                {"value": "DELETION", "label": "Deleting database logs"}
+            ],
+            "answer": "PREPARATION"
+        },
+        {
+            "q_id": "q5",
+            "question": "5. Which octal permission mode provides optimal security for sensitive private keys on Linux?",
+            "options": [
+                {"value": "400", "label": "chmod 400 (Read-only for owner, no access for others)"},
+                {"value": "777", "label": "chmod 777 (Full read/write/execute for everyone)"},
+                {"value": "666", "label": "chmod 666 (Read/write for all)"},
+                {"value": "755", "label": "chmod 755 (Executable by all)"}
+            ],
+            "answer": "400"
+        },
+        {
+            "q_id": "q6",
+            "question": "6. What technical artifact represents verifiable evidence of an intrusion (e.g. SHA-256 hash or malicious C2 domain)?",
+            "options": [
+                {"value": "IOC", "label": "Indicator of Compromise (IOC)"},
+                {"value": "CSS", "label": "Cascading Style Sheet"},
+                {"value": "RAM", "label": "Random Access Memory"},
+                {"value": "HTML", "label": "HyperText Markup Language"}
+            ],
+            "answer": "IOC"
+        }
+    ]
+
+    return {
+        "id": course_id,
+        "code": clean_code,
+        "division": clean_div,
+        "title": clean_topic,
+        "credential_title": f"Certified {clean_topic.split()[0]} Specialist ({clean_code.replace('ACAD-', '')})",
+        "ceu_credits": "4.0 CEU Credits (NIST NICE: Protect & Defend / Analyze)",
+        "xp": 1000,
+        "estimated_duration": "3.5 Hours (5 Lessons + Cyber Range Lab)",
+        "summary": f"A rigorous, hands-on training track in {clean_topic}. Master foundational architecture, offensive threat vectors, cryptographic defense, and zero-trust engineering.",
+        "modules": modules,
+        "lab": lab,
+        "exam": exam,
+        "is_published": 1
+    }
+
+
 def hash_password(password: str, salt: str = "") -> str:
     if not salt:
         salt = secrets.token_hex(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 150000)
     return f"{salt}${dk.hex()}"
+
+
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
@@ -643,6 +615,15 @@ def init_portal_db():
         )
     """)
     c.execute("""
+        CREATE TABLE IF NOT EXISTS completed_lessons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_callsign TEXT NOT NULL,
+            lesson_id TEXT NOT NULL,
+            completed_at TEXT NOT NULL,
+            UNIQUE(agent_callsign, lesson_id)
+        )
+    """)
+    c.execute("""
         CREATE TABLE IF NOT EXISTS instructor_applications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             full_name TEXT NOT NULL,
@@ -653,10 +634,69 @@ def init_portal_db():
             created_at TEXT NOT NULL
         )
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS courses (
+            id TEXT PRIMARY KEY,
+            code TEXT NOT NULL,
+            division TEXT NOT NULL,
+            title TEXT NOT NULL,
+            credential_title TEXT NOT NULL,
+            ceu_credits TEXT NOT NULL,
+            xp INTEGER NOT NULL,
+            estimated_duration TEXT DEFAULT '3.0 Hours',
+            summary TEXT NOT NULL,
+            modules_json TEXT NOT NULL,
+            lab_json TEXT NOT NULL,
+            exam_json TEXT NOT NULL,
+            is_published INTEGER DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+    course_cols = [row[1] for row in c.execute("PRAGMA table_info(courses)").fetchall()]
+    if "free_preview_count" not in course_cols:
+        c.execute("ALTER TABLE courses ADD COLUMN free_preview_count INTEGER DEFAULT 2")
+
+    agent_cols = [row[1] for row in c.execute("PRAGMA table_info(agents)").fetchall()]
+    if "stripe_customer_id" not in agent_cols:
+        c.execute("ALTER TABLE agents ADD COLUMN stripe_customer_id TEXT DEFAULT ''")
+    if "stripe_subscription_id" not in agent_cols:
+        c.execute("ALTER TABLE agents ADD COLUMN stripe_subscription_id TEXT DEFAULT ''")
+    if "subscription_status" not in agent_cols:
+        c.execute("ALTER TABLE agents ADD COLUMN subscription_status TEXT DEFAULT 'active'")
+
+    # Seed core courses if courses table is empty
+    c_count = c.execute("SELECT COUNT(*) FROM courses").fetchone()[0]
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    if c_count == 0:
+        for c_item in ACADEMY_COURSES:
+            c.execute("""
+                INSERT OR REPLACE INTO courses (
+                    id, code, division, title, credential_title, ceu_credits, xp,
+                    estimated_duration, summary, modules_json, lab_json, exam_json,
+                    is_published, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            """, (
+                c_item["id"],
+                c_item["code"],
+                c_item.get("division", ""),
+                c_item["title"],
+                c_item.get("credential_title", ""),
+                c_item.get("ceu_credits", ""),
+                int(c_item.get("xp", 500)),
+                c_item.get("estimated_duration", "2.5 Hours"),
+                c_item.get("summary", ""),
+                json.dumps(c_item.get("modules", [])),
+                json.dumps(c_item.get("lab", {})),
+                json.dumps(c_item.get("exam", [])),
+                now_str,
+                now_str
+            ))
 
     # Seed Director / Primary Account (james.f@theintelligenceagency.net)
     existing = c.execute("SELECT id FROM agents WHERE callsign = ?", ("james.f",)).fetchone()
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
     if not existing:
         c.execute("""
             INSERT INTO agents (
@@ -886,15 +926,14 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
             })
 
         if path == "/api/academy/courses":
-            courses_out = []
-            for c_item in ACADEMY_COURSES:
-                c_copy = dict(c_item)
-                c_copy["exam"] = [
-                    {"q_id": q["q_id"], "question": q["question"], "options": q["options"]}
-                    for q in c_item["exam"]
-                ]
-                courses_out.append(c_copy)
+            courses_out = [_sanitize_course_for_client(c_item) for c_item in get_all_courses()]
             return self._send_json(200, {"courses": courses_out})
+
+        if path == "/api/admin/courses":
+            agent = self._get_authenticated_agent()
+            if not agent or (agent["callsign"] != "james.f" and "DIRECTOR" not in agent.get("clearance_level", "").upper()):
+                return self._send_json(403, {"error": "Restricted to Agency Directorate."})
+            return self._send_json(200, {"courses": get_all_courses(include_unpublished=True)})
 
         if path == "/api/certificates/verify":
             cert_id = (qs.get("cert_id", [""])[0] or "").strip().upper()
@@ -938,6 +977,12 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
             ).fetchall()
             solved_ids = {r["mission_id"] for r in solved_rows}
 
+            lesson_rows = conn.execute(
+                "SELECT lesson_id FROM completed_lessons WHERE agent_callsign = ?",
+                (agent["callsign"],)
+            ).fetchall()
+            completed_lesson_ids = {r["lesson_id"] for r in lesson_rows}
+
             cert_rows = conn.execute(
                 "SELECT * FROM issued_certificates WHERE agent_callsign = ? ORDER BY id DESC",
                 (agent["callsign"],)
@@ -953,17 +998,19 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 m_copy["completed"] = m["id"] in solved_ids
                 missions_out.append(m_copy)
 
-            courses_out = []
-            for c_item in ACADEMY_COURSES:
-                c_copy = dict(c_item)
-                c_copy["exam"] = [
-                    {"q_id": q["q_id"], "question": q["question"], "options": q["options"]}
-                    for q in c_item["exam"]
-                ]
-                earned = cert_by_course.get(c_item["id"])
-                c_copy["completed"] = earned is not None
-                c_copy["certificate"] = earned
-                courses_out.append(c_copy)
+            is_director = agent["callsign"] == "james.f" or "DIRECTOR" in agent.get("clearance_level", "").upper()
+            agent_tier = "DIRECTOR" if is_director else agent.get("plan_tier", "OPERATIVE_PRO")
+
+            all_courses = get_all_courses()
+            courses_out = [
+                _sanitize_course_for_client(
+                    c_item,
+                    completed_lesson_ids=completed_lesson_ids,
+                    earned_cert=cert_by_course.get(c_item["id"]),
+                    agent_tier=agent_tier
+                )
+                for c_item in all_courses
+            ]
 
             return self._send_json(200, {
                 "agent": {
@@ -974,6 +1021,7 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                     "clearance_level": agent["clearance_level"],
                     "rank": agent["rank"],
                     "xp": agent["xp"],
+                    "is_director": is_director,
                     "plan_tier": agent["plan_tier"],
                     "created_at": agent["created_at"],
                     "imap_host": "mailserver.businessidentity.llc",
@@ -988,6 +1036,7 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 "academy_courses": courses_out,
                 "certificates": certificates
             })
+
 
         return super().do_GET()
 
@@ -1261,19 +1310,157 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 "message": f"VERIFIED! +{target_mission['xp']} XP awarded. Rank: {new_rank}"
             })
 
+        if path == "/api/academy/lab-exec":
+            course_id = (body.get("course_id") or body.get("code") or "").strip()
+            command = (body.get("command") or "").strip()
+            res = run_course_lab_command(course_id, command)
+            return self._send_json(200, {
+                "ok": res.get("ok", True),
+                "command": command,
+                "output": res.get("output", "")
+            })
+
+        if path == "/api/academy/lesson-checkpoint":
+            course_id = (body.get("course_id") or body.get("code") or "").strip()
+            lesson_id = (body.get("lesson_id") or "").strip()
+            raw_answer = (body.get("answer") or "").strip()
+
+            course = get_course_by_id(course_id)
+            if not course:
+                return self._send_json(404, {"error": "Academy course not found."})
+
+            target_mod = None
+            target_idx = 1
+            for idx, m in enumerate(course.get("modules", []), start=1):
+                mid = m.get("lesson_id") or f"{course['id']}-m{idx}"
+                if mid.lower() == lesson_id.lower():
+                    target_mod = dict(m)
+                    target_mod["lesson_id"] = mid
+                    target_idx = idx
+                    break
+
+            if not target_mod:
+                return self._send_json(404, {"error": "Lesson module not found."})
+
+            agent = self._get_authenticated_agent()
+            free_preview_count = int(course.get("free_preview_count") or 2)
+            is_cadet = (not agent) or (agent.get("plan_tier") == "CADET_FREE")
+            is_exempt = agent and (agent["callsign"] == "james.f" or "DIRECTOR" in agent.get("clearance_level", "").upper())
+
+            if is_cadet and not is_exempt and target_idx > free_preview_count:
+                return self._send_json(200, {
+                    "correct": False,
+                    "requires_upgrade": True,
+                    "lesson_id": target_mod["lesson_id"],
+                    "message": (
+                        f"🔒 LEVEL-5 OPERATIVE CLEARANCE REQUIRED // You have mastered the foundational chapters! "
+                        f"Chapter {target_idx} and specialized practical exercises require Level-5 Operative ($4.99/mo) "
+                        f"or Station Chief Lifetime ($69) clearance."
+                    )
+                })
+
+            expected = (target_mod.get("checkpoint_answer") or target_mod.get("checkpoint_a") or "").strip()
+            norm_sub = re.sub(r"[^a-zA-Z0-9._+-]", "", raw_answer).upper()
+            norm_exp = re.sub(r"[^a-zA-Z0-9._+-]", "", expected).upper()
+
+            if not norm_sub or (norm_sub != norm_exp and expected.upper() not in raw_answer.upper()):
+                return self._send_json(200, {
+                    "correct": False,
+                    "lesson_id": target_mod["lesson_id"],
+                    "message": f"CHECKPOINT MISMATCH // Review the lesson material. Hint: {target_mod.get('checkpoint_hint', '')}"
+                })
+
+            agent = self._get_authenticated_agent()
+            if not agent:
+                return self._send_json(200, {
+                    "correct": True,
+                    "lesson_id": target_mod["lesson_id"],
+                    "xp_gained": 0,
+                    "message": "CHECKPOINT VERIFIED! (Sign in to Agent HQ to record permanent lesson progress & +50 XP)."
+                })
+
+            conn = get_db()
+            c = conn.cursor()
+            already = c.execute(
+                "SELECT id FROM completed_lessons WHERE agent_callsign = ? AND lesson_id = ?",
+                (agent["callsign"], target_mod["lesson_id"])
+            ).fetchone()
+
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            xp_gained = 0
+            new_xp = int(agent["xp"])
+            new_rank = agent["rank"]
+
+            if not already:
+                c.execute(
+                    "INSERT INTO completed_lessons (agent_callsign, lesson_id, completed_at) VALUES (?, ?, ?)",
+                    (agent["callsign"], target_mod["lesson_id"], now_str)
+                )
+                xp_gained = 50
+                new_xp += xp_gained
+                new_rank = rank_for_xp(new_xp)
+                c.execute(
+                    "UPDATE agents SET xp = ?, rank = ? WHERE callsign = ?",
+                    (new_xp, new_rank, agent["callsign"])
+                )
+                conn.commit()
+
+            lesson_rows = c.execute(
+                "SELECT lesson_id FROM completed_lessons WHERE agent_callsign = ?",
+                (agent["callsign"],)
+            ).fetchall()
+            done_set = {r["lesson_id"] for r in lesson_rows}
+            conn.close()
+
+            course_lesson_ids = [m.get("lesson_id") or f"{course['id']}-m{idx}" for idx, m in enumerate(course.get("modules", []), start=1)]
+            completed_count = sum(1 for lid in course_lesson_ids if lid in done_set)
+            total_count = len(course_lesson_ids)
+            progress_pct = int(round((completed_count / total_count) * 100)) if total_count else 100
+
+            return self._send_json(200, {
+                "correct": True,
+                "lesson_id": target_mod["lesson_id"],
+                "already_completed": already is not None,
+                "xp_gained": xp_gained,
+                "xp": new_xp,
+                "rank": new_rank,
+                "completed_lessons": completed_count,
+                "total_lessons": total_count,
+                "progress_pct": progress_pct,
+                "message": (
+                    f"LESSON CHECKPOINT VERIFIED! +{xp_gained} XP awarded ({completed_count}/{total_count} lessons complete)."
+                    if xp_gained > 0 else
+                    f"Lesson checkpoint already verified ({completed_count}/{total_count} lessons complete)."
+                )
+            })
+
         if path == "/api/academy/exam":
             agent = self._get_authenticated_agent()
             if not agent:
                 return self._send_json(401, {"error": "Unauthorized."})
             course_id = (body.get("course_id") or body.get("code") or "").strip()
             answers = body.get("answers") or {}
+            submitted_flag = (body.get("lab_flag") or "").strip().upper()
 
-            course = next(
-                (c for c in ACADEMY_COURSES if c["id"].lower() == course_id.lower() or c["code"].lower() == course_id.lower()),
-                None
-            )
+            course = get_course_by_id(course_id)
             if not course:
                 return self._send_json(404, {"error": "Academy course not found."})
+
+            is_cadet = agent.get("plan_tier") == "CADET_FREE"
+            is_exempt = agent["callsign"] == "james.f" or "DIRECTOR" in agent.get("clearance_level", "").upper()
+            if is_cadet and not is_exempt:
+                return self._send_json(200, {
+                    "passed": False,
+                    "requires_upgrade": True,
+                    "message": (
+                        "🔒 CERTIFICATION RESTRICTED // The official certification exam, CEU credits, "
+                        "and SHA-256 signed TIA-CERT diploma require Level-5 Operative ($4.99/mo) or Station Chief Lifetime ($69) clearance."
+                    )
+                })
+
+
+            expected_flag = ((course.get("lab") or {}).get("flag") or "").strip().upper()
+            lab_flag_valid = (not expected_flag) or (submitted_flag == expected_flag)
 
             total_q = len(course["exam"])
             correct_q = 0
@@ -1283,13 +1470,28 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                     correct_q += 1
 
             score_pct = int(round((correct_q / total_q) * 100)) if total_q else 100
-            if correct_q < total_q:
+            if not lab_flag_valid:
                 return self._send_json(200, {
                     "passed": False,
+                    "lab_flag_valid": False,
                     "score_pct": score_pct,
                     "correct_count": correct_q,
                     "total_count": total_q,
-                    "message": f"EXAM SCORE: {correct_q}/{total_q} ({score_pct}%). 100% required for Directorate Certification. Review the course modules and try again!"
+                    "message": (
+                        f"PRACTICAL LAB FLAG REQUIRED // Written score: {correct_q}/{total_q} ({score_pct}%), "
+                        f"but the Cyber Range Practical Lab Flag (FLAG{{...}}) was missing or invalid. "
+                        f"Run the commands in the Interactive Lab Terminal above to capture the course flag!"
+                    )
+                })
+
+            if correct_q < total_q:
+                return self._send_json(200, {
+                    "passed": False,
+                    "lab_flag_valid": True,
+                    "score_pct": score_pct,
+                    "correct_count": correct_q,
+                    "total_count": total_q,
+                    "message": f"EXAM SCORE: {correct_q}/{total_q} ({score_pct}%) | Practical Lab Flag: VERIFIED. 100% ({total_q}/{total_q}) required on the written exam for Directorate Certification!"
                 })
 
             conn = get_db()
@@ -1333,6 +1535,14 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 sig,
                 now_str
             ))
+
+            # Also mark all lessons in this course as completed
+            for m in course.get("modules", []):
+                if m.get("lesson_id"):
+                    c.execute(
+                        "INSERT OR IGNORE INTO completed_lessons (agent_callsign, lesson_id, completed_at) VALUES (?, ?, ?)",
+                        (agent["callsign"], m["lesson_id"], now_str)
+                    )
 
             new_xp = int(agent["xp"]) + int(course["xp"])
             new_rank = rank_for_xp(new_xp)
@@ -1378,7 +1588,219 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 "message": f"🎓 CERTIFICATION EARNED! Credential '{course['credential_title']}' ({cert_id}) issued (+{course['xp']} XP)!"
             })
 
+        # ---------------------------------------------------------------------
+        # BILLING & STRIPE CHECKOUT API ENDPOINTS
+        # ---------------------------------------------------------------------
+        if path == "/api/billing/create-checkout-session":
+            agent = self._get_authenticated_agent()
+            plan_tier = (body.get("plan_tier") or "OPERATIVE_MONTHLY").upper().strip()
+            callsign = (agent["callsign"] if agent else (body.get("callsign") or "operative")).strip()
+
+            stripe_key = os.environ.get("STRIPE_SECRET_KEY", "").strip()
+
+            TIER_PRICES = {
+                "CADET_FREE": {"amount": 0, "currency": "usd", "name": "Cadet Recruit Access", "mode": "free"},
+                "OPERATIVE_MONTHLY": {"amount": 499, "currency": "usd", "name": "Level-5 Operative Clearance (Monthly)", "mode": "subscription"},
+                "OPERATIVE_ANNUAL": {"amount": 3999, "currency": "usd", "name": "Level-5 Operative Clearance (Annual Pass - Save 33%)", "mode": "subscription"},
+                "STATION_CHIEF_LIFETIME": {"amount": 6900, "currency": "usd", "name": "Station Chief Clearance (Lifetime Founder)", "mode": "payment"},
+            }
+            tier_meta = TIER_PRICES.get(plan_tier, TIER_PRICES["OPERATIVE_MONTHLY"])
+
+            if stripe_key and tier_meta["mode"] != "free":
+                try:
+                    stripe_url = "https://api.stripe.com/v1/checkout/sessions"
+                    params = {
+                        "mode": tier_meta["mode"],
+                        "success_url": f"https://{DOMAIN}/?payment=success&tier={plan_tier}&session_id={{CHECKOUT_SESSION_ID}}",
+                        "cancel_url": f"https://{DOMAIN}/?payment=cancelled",
+                        "client_reference_id": callsign,
+                        "metadata[callsign]": callsign,
+                        "metadata[plan_tier]": plan_tier,
+                        "line_items[0][price_data][currency]": tier_meta["currency"],
+                        "line_items[0][price_data][product_data][name]": tier_meta["name"],
+                        "line_items[0][price_data][unit_amount]": str(tier_meta["amount"]),
+                        "line_items[0][quantity]": "1"
+                    }
+                    if tier_meta["mode"] == "subscription":
+                        interval = "year" if plan_tier == "OPERATIVE_ANNUAL" else "month"
+                        params["line_items[0][price_data][recurring][interval]"] = interval
+
+                    post_data = urllib.parse.urlencode(params).encode("utf-8")
+                    req = urllib.request.Request(stripe_url, data=post_data, method="POST")
+                    auth_header = base64.b64encode(f"{stripe_key}:".encode("utf-8")).decode("utf-8")
+                    req.add_header("Authorization", f"Basic {auth_header}")
+                    req.add_header("Content-Type", "application/x-www-form-urlencoded")
+
+                    with urllib.request.urlopen(req, timeout=12) as stripe_resp:
+                        stripe_data = json.loads(stripe_resp.read().decode("utf-8"))
+                        return self._send_json(200, {
+                            "ok": True,
+                            "checkout_url": stripe_data.get("url"),
+                            "session_id": stripe_data.get("id"),
+                            "simulated": False
+                        })
+                except Exception as ex:
+                    print(f"[STRIPE API ERROR] {ex}")
+
+            # Local Simulation / Sandbox Fallback
+            return self._send_json(200, {
+                "ok": True,
+                "simulated": True,
+                "plan_tier": plan_tier,
+                "tier_name": tier_meta["name"],
+                "amount": tier_meta["amount"],
+                "message": f"Sandbox Billing Mode Active. Instant clearance activation available for {tier_meta['name']}."
+            })
+
+        if path == "/api/billing/simulate-upgrade":
+            agent = self._get_authenticated_agent()
+            if not agent:
+                return self._send_json(401, {"error": "Unauthorized."})
+
+            new_tier = (body.get("plan_tier") or "OPERATIVE_MONTHLY").upper().strip()
+            clearance_map = {
+                "CADET_FREE": ("CADET RECRUIT", "CADET // LEVEL 1"),
+                "OPERATIVE_MONTHLY": ("LEVEL-5 OPERATIVE", "SPECIAL AGENT // LEVEL 5"),
+                "OPERATIVE_ANNUAL": ("LEVEL-5 OPERATIVE (ANNUAL)", "SENIOR OPERATIVE // LEVEL 5"),
+                "STATION_CHIEF_LIFETIME": ("STATION CHIEF (LIFETIME)", "STATION CHIEF // LEVEL 5")
+            }
+            clearance_level, rank = clearance_map.get(new_tier, ("LEVEL-5 OPERATIVE", "SPECIAL AGENT // LEVEL 5"))
+
+            conn = get_db()
+            conn.execute("""
+                UPDATE agents 
+                SET plan_tier = ?, clearance_level = ?, rank = ?, subscription_status = 'active'
+                WHERE callsign = ?
+            """, (new_tier, clearance_level, rank, agent["callsign"]))
+
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            conn.execute("""
+                INSERT INTO transmissions (
+                    agent_callsign, folder, sender, recipient, subject, body, classification, is_read, created_at
+                ) VALUES (?, 'inbox', 'directorate@theintelligenceagency.net', ?, ?, ?, 'CLEARANCE UPGRADE // OFFICIAL', 0, ?)
+            """, (
+                agent["callsign"],
+                agent["email_address"],
+                f"[DIRECTORATE] Clearance Escalated to {clearance_level}",
+                (
+                    f"OPERATIVE CLEARANCE UPGRADE CONFIRMED\n"
+                    f"=====================================\n"
+                    f"Callsign        : {agent['callsign']}\n"
+                    f"New Plan Tier   : {new_tier}\n"
+                    f"Clearance Level : {clearance_level}\n"
+                    f"Rank            : {rank}\n"
+                    f"Status          : ACTIVE // ALL MODULES & CERTIFICATIONS UNLOCKED\n\n"
+                    f"Welcome to full operational status."
+                ),
+                now_str
+            ))
+            conn.commit()
+            conn.close()
+
+            return self._send_json(200, {
+                "ok": True,
+                "plan_tier": new_tier,
+                "clearance_level": clearance_level,
+                "rank": rank,
+                "message": f"Clearance escalated to {clearance_level} ({new_tier})!"
+            })
+
+        # ---------------------------------------------------------------------
+        # DIRECTOR COURSE STUDIO API ENDPOINTS
+        # ---------------------------------------------------------------------
+        if path == "/api/admin/courses/save":
+            agent = self._get_authenticated_agent()
+            if not agent or (agent["callsign"] != "james.f" and "DIRECTOR" not in agent.get("clearance_level", "").upper()):
+                return self._send_json(403, {"error": "Restricted to Agency Directorate."})
+
+            course_data = body.get("course") or body
+            cid = re.sub(r"[^a-z0-9_-]", "", str(course_data.get("id") or course_data.get("code") or "").lower().strip())
+            code = (course_data.get("code") or cid.upper()).strip()
+            title = (course_data.get("title") or "Untitled Track").strip()
+            division = (course_data.get("division") or "DIVISION 05 // ADVANCED APPLIED SECURITY").strip()
+            cred_title = (course_data.get("credential_title") or f"Certified {title} Specialist").strip()
+            ceu = (course_data.get("ceu_credits") or "4.0 CEU Credits (NIST NICE)").strip()
+            xp = int(course_data.get("xp") or 1000)
+            duration = (course_data.get("estimated_duration") or "3.0 Hours").strip()
+            summary = (course_data.get("summary") or "").strip()
+            modules = course_data.get("modules") or []
+            lab = course_data.get("lab") or {}
+            exam = course_data.get("exam") or []
+            is_pub = 1 if course_data.get("is_published", True) else 0
+
+            if not cid or not code:
+                return self._send_json(400, {"error": "Course ID and Code are required."})
+
+            for idx, m in enumerate(modules, start=1):
+                if not m.get("lesson_id"):
+                    m["lesson_id"] = f"{cid}-m{idx}"
+
+            free_preview = int(course_data.get("free_preview_count") or 2)
+
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            conn = get_db()
+            conn.execute("""
+                INSERT OR REPLACE INTO courses (
+                    id, code, division, title, credential_title, ceu_credits, xp,
+                    estimated_duration, summary, modules_json, lab_json, exam_json,
+                    free_preview_count, is_published, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM courses WHERE id = ?), ?), ?)
+            """, (
+                cid, code, division, title, cred_title, ceu, xp, duration, summary,
+                json.dumps(modules), json.dumps(lab), json.dumps(exam),
+                free_preview, is_pub, cid, now_str, now_str
+            ))
+            conn.commit()
+            conn.close()
+
+            return self._send_json(200, {
+                "ok": True,
+                "course_id": cid,
+                "message": f"Course [{code}] successfully saved & published to Live Academy!"
+            })
+
+        if path == "/api/admin/courses/delete":
+            agent = self._get_authenticated_agent()
+            if not agent or (agent["callsign"] != "james.f" and "DIRECTOR" not in agent.get("clearance_level", "").upper()):
+                return self._send_json(403, {"error": "Restricted to Agency Directorate."})
+
+            cid = (body.get("course_id") or body.get("id") or "").strip().lower()
+            if not cid:
+                return self._send_json(400, {"error": "Course ID required."})
+
+            conn = get_db()
+            conn.execute("DELETE FROM courses WHERE id = ?", (cid,))
+            conn.commit()
+            conn.close()
+
+            return self._send_json(200, {
+                "ok": True,
+                "message": f"Course '{cid}' deleted from database."
+            })
+
+        if path == "/api/admin/courses/ai-ingest":
+            agent = self._get_authenticated_agent()
+            if not agent or (agent["callsign"] != "james.f" and "DIRECTOR" not in agent.get("clearance_level", "").upper()):
+                return self._send_json(403, {"error": "Restricted to Agency Directorate."})
+
+            topic = (body.get("topic") or "").strip()
+            raw_material = (body.get("raw_material") or "").strip()
+            code = (body.get("code") or "").strip()
+            division = (body.get("division") or "").strip()
+
+            if not topic and not raw_material:
+                return self._send_json(400, {"error": "Please provide a Course Topic or paste raw material."})
+
+            draft = generate_course_template_from_material(topic=topic or "Advanced Cyber Operations", raw_material=raw_material, division=division, code=code)
+            return self._send_json(200, {
+                "ok": True,
+                "course": draft,
+                "draft_course": draft
+            })
+
+
         if path == "/api/academy/instructor-apply":
+
             full_name = (body.get("full_name") or "").strip()
             email = (body.get("email") or "").strip()
             credentials = (body.get("credentials") or "").strip()
