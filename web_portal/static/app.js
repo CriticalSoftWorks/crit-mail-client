@@ -381,6 +381,15 @@ async function loadAgentDashboard() {
     };
     if (planBadge) planBadge.textContent = tierLabels[a.plan_tier] || `PLAN: ${a.plan_tier || a.clearance_level}`;
     if (planStatus) planStatus.textContent = `Status: Active • ${a.clearance_level}`;
+
+    const portalBtn = document.getElementById("btn-customer-portal");
+    if (portalBtn) {
+      if (a.stripe_customer_id || (a.plan_tier && a.plan_tier !== "CADET_FREE" && a.plan_tier !== "DIRECTOR")) {
+        portalBtn.style.display = "inline-flex";
+      } else {
+        portalBtn.style.display = "none";
+      }
+    }
   } catch (err) {
     console.error("Dashboard load error:", err);
   }
@@ -1019,12 +1028,76 @@ async function submitMissionAnswer(missionId) {
 window.submitMissionAnswer = submitMissionAnswer;
 
 // ---------------------------------------------------------------------------
-// 5. Event Listeners & PWA Install Prompt
+// 5. Display Theme (Tactical vs Modern Sleek) & Event Listeners
 // ---------------------------------------------------------------------------
+
+function updateThemeToggleUi(theme) {
+  const iconEl = document.getElementById("theme-toggle-icon");
+  const textEl = document.getElementById("theme-toggle-text");
+  const btn = document.getElementById("btn-theme-toggle");
+  if (!btn) return;
+
+  if (theme === "modern") {
+    if (iconEl) iconEl.textContent = "🛰";
+    if (textEl) textEl.textContent = "Tactical Mode";
+    btn.title = "Switch to Tactical Terminal HUD";
+  } else {
+    if (iconEl) iconEl.textContent = "✨";
+    if (textEl) textEl.textContent = "Modern Sleek";
+    btn.title = "Switch to Modern Sleek Reader Theme";
+  }
+}
+
+function initDisplayTheme() {
+  const btn = document.getElementById("btn-theme-toggle");
+  let currentTheme = "tactical";
+  try {
+    currentTheme = localStorage.getItem("tia-display-theme") || "tactical";
+  } catch (e) {}
+
+  if (currentTheme === "modern") {
+    document.documentElement.setAttribute("data-theme", "modern");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  updateThemeToggleUi(currentTheme);
+
+  if (btn) {
+    btn.addEventListener("click", () => {
+      currentTheme = currentTheme === "modern" ? "tactical" : "modern";
+      if (currentTheme === "modern") {
+        document.documentElement.setAttribute("data-theme", "modern");
+      } else {
+        document.documentElement.removeAttribute("data-theme");
+      }
+      try {
+        localStorage.setItem("tia-display-theme", currentTheme);
+      } catch (e) {}
+      updateThemeToggleUi(currentTheme);
+    });
+  }
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === "tia-display-theme") {
+      const newTheme = e.newValue || "tactical";
+      currentTheme = newTheme;
+      if (newTheme === "modern") {
+        document.documentElement.setAttribute("data-theme", "modern");
+      } else {
+        document.documentElement.removeAttribute("data-theme");
+      }
+      updateThemeToggleUi(newTheme);
+    }
+  });
+}
+window.initDisplayTheme = initDisplayTheme;
+
 document.addEventListener("DOMContentLoaded", () => {
+  initDisplayTheme();
   runCriticalSoftworksSplash();
   initDialogLightDismissFallbacks();
   loadPublicAcademyCurriculum();
+  handlePaymentReturn();
   loadAgentDashboard();
 
   // Register Service Worker for Mobile PWA
@@ -2087,3 +2160,67 @@ async function simulateClearanceUpgrade(planTier) {
   }
 }
 window.simulateClearanceUpgrade = simulateClearanceUpgrade;
+
+async function handlePaymentReturn() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams.get("payment");
+  const sessionId = urlParams.get("session_id");
+
+  if (paymentStatus === "success" && sessionId) {
+    const statusEl = document.getElementById("dossier-plan-status");
+    if (statusEl) statusEl.textContent = "Verifying clearance payment with Stripe...";
+    try {
+      const res = await fetch("/api/billing/verify-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`🎖 PAYMENT VERIFIED!\n\nYour clearance has been escalated to ${data.clearance_level} (${data.plan_tier}).\nAll academy courses, practical cyber ranges, and certification exams are unlocked!`);
+      } else {
+        console.warn("Session verification warning:", data);
+      }
+    } catch (err) {
+      console.error("Payment return error:", err);
+    } finally {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      loadAgentDashboard();
+    }
+  } else if (paymentStatus === "cancelled") {
+    alert("Clearance transaction cancelled. Your current standing remains unchanged.");
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+window.handlePaymentReturn = handlePaymentReturn;
+
+async function openBillingPortal() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) {
+    alert("Authentication expired. Please sign in again.");
+    return;
+  }
+  const statusEl = document.getElementById("dossier-plan-status");
+  if (statusEl) statusEl.textContent = "Connecting to Stripe Billing Portal...";
+  try {
+    const res = await fetch("/api/billing/customer-portal", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const data = await res.json();
+    if (data.portal_url) {
+      window.location.href = data.portal_url;
+    } else {
+      alert(data.error || "Unable to open billing portal.");
+      if (statusEl) statusEl.textContent = "Status: Active • Verifiable Cryptographic Access";
+    }
+  } catch (err) {
+    console.error("Portal error:", err);
+    alert("Connection error opening billing portal.");
+    if (statusEl) statusEl.textContent = "Status: Active • Verifiable Cryptographic Access";
+  }
+}
+window.openBillingPortal = openBillingPortal;

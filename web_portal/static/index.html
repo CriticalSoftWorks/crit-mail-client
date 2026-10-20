@@ -10,6 +10,16 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/png" href="/icon.png" />
   <link rel="apple-touch-icon" href="/icon.png" />
+  <meta name="color-scheme" content="dark" />
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("tia-display-theme") === "modern") {
+          document.documentElement.setAttribute("data-theme", "modern");
+        }
+      } catch (e) {}
+    })();
+  </script>
   <title>THE INTELLIGENCE AGENCY // Cybersecurity Academy, SIGINT Webmail &amp; Cryptanalysis</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -31,6 +41,9 @@
     </a>
 
     <div class="nav-actions">
+      <button type="button" class="btn" id="btn-theme-toggle" title="Switch Display Style: Tactical Terminal vs Modern Sleek" aria-label="Toggle Display Style">
+        <span id="theme-toggle-icon">✨</span> <span id="theme-toggle-text">Modern Sleek</span>
+      </button>
       <button type="button" class="btn" id="btn-install-pwa" style="display:none;">📱 Install Mobile App</button>
       <button type="button" class="btn btn-accent" id="btn-toggle-public-hq" style="display:none;">🌐 Public Academy Page</button>
       <button type="button" class="btn" id="btn-open-login">🔐 Operative Login</button>
@@ -155,7 +168,10 @@
               <span class="status-pill" style="margin:0; border-color:var(--accent-green); color:var(--accent-green);" id="dossier-plan-badge">PLAN: LEVEL-5 OPERATIVE</span>
               <h3 style="color:#ffffff; margin:0.35rem 0 0.15rem 0; font-size:1.05rem;">🎖 AGENCY CLEARANCE &amp; SUBSCRIPTION STATUS</h3>
             </div>
-            <span style="font-size:0.76rem; color:var(--text-secondary);" id="dossier-plan-status">Status: Active &bull; Verifiable Cryptographic Access</span>
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+              <span style="font-size:0.76rem; color:var(--text-secondary);" id="dossier-plan-status">Status: Active &bull; Verifiable Cryptographic Access</span>
+              <button type="button" class="btn" id="btn-customer-portal" onclick="openBillingPortal()" style="display:none; font-size:0.72rem; padding:0.25rem 0.6rem; border-color:var(--text-accent); color:var(--text-accent);">⚙ Manage Subscription (Stripe)</button>
+            </div>
           </div>
           <p style="color:var(--text-secondary); font-size:0.82rem; margin-bottom:0.85rem;">
             Your clearance level dictates access across @theintelligenceagency.net encrypted webmail dispatch, deep textbook chapters, hands-on Cyber Range exploitation sandboxes, and SHA-256 signed TIA-CERT diplomas.
@@ -594,32 +610,41 @@ SMTP Port     : 465 (SSL/TLS)</div>
       <!-- Clearance Tiers & Pricing -->
       <div class="hero-panel" style="margin-bottom:0;">
         <h2 style="color:var(--text-accent); font-size:1.2rem; margin-bottom:0.85rem;">🎖 SELECT YOUR CLEARANCE TIER</h2>
-        <div class="grid-3" style="margin-bottom:0;">
+        <div class="grid-4" style="margin-bottom:0;">
           <div class="intel-card">
             <div>
               <h3>CADET // FREE ACCESS</h3>
               <div style="font-size:1.5rem; font-weight:700; color:#fff; margin:0.4rem 0;">$0 <span style="font-size:0.8rem; color:var(--text-secondary);">forever</span></div>
-              <p>Reserve your <strong><code>@theintelligenceagency.net</code></strong> callsign, study the Academy course modules, solve introductory cipher missions, and explore the FOIA Vault.</p>
+              <p>Reserve your <strong><code>@theintelligenceagency.net</code></strong> callsign, study foundational Academy chapters, solve cipher missions, and explore the FOIA Vault.</p>
             </div>
             <button type="button" class="btn" onclick="openEnlistModal('CADET_FREE')">🎓 Enlist Free as Cadet</button>
           </div>
 
-          <div class="intel-card" style="border-color:var(--accent-green);">
+          <div class="intel-card" style="border-color:var(--text-accent);">
             <div>
-              <h3>LEVEL-5 OPERATIVE // PRO</h3>
-              <div style="font-size:1.5rem; font-weight:700; color:var(--accent-green); margin:0.4rem 0;">$4.99 <span style="font-size:0.8rem; color:var(--text-secondary);">/ month</span></div>
-              <p>Full <strong><code>@theintelligenceagency.net</code></strong> Encrypted Webmail, all 4 Verifiable <code>TIA-CERT</code> Certification Exams &amp; CEU Credits, and priority callsign routing.</p>
+              <h3>LEVEL-5 OPERATIVE</h3>
+              <div style="font-size:1.5rem; font-weight:700; color:var(--text-accent); margin:0.4rem 0;">$4.99 <span style="font-size:0.8rem; color:var(--text-secondary);">/ month</span></div>
+              <p>Full <strong><code>@theintelligenceagency.net</code></strong> Encrypted Webmail, all deep textbook chapters, hands-on Cyber Range labs &amp; <code>TIA-CERT</code> exams.</p>
             </div>
-            <button type="button" class="btn btn-green" onclick="openEnlistModal('OPERATIVE_MONTHLY')">🎖 Enlist as Level-5 Operative</button>
+            <button type="button" class="btn btn-accent" onclick="openEnlistModal('OPERATIVE_MONTHLY')">🎖 Enlist as Level-5 ($4.99/mo)</button>
           </div>
 
-          <div class="intel-card" style="border-color:var(--border-active);">
+          <div class="intel-card" style="border-color:var(--accent-green);">
+            <div>
+              <h3>ANNUAL OPERATIVE PASS</h3>
+              <div style="font-size:1.5rem; font-weight:700; color:var(--accent-green); margin:0.4rem 0;">$39.99 <span style="font-size:0.8rem; color:var(--text-secondary);">/ year (Save 33%)</span></div>
+              <p>Everything in Level-5 Operative with annual rate savings, priority support, and expedited VIP clearance briefing queue.</p>
+            </div>
+            <button type="button" class="btn btn-green" onclick="openEnlistModal('OPERATIVE_ANNUAL')">🛡 Enlist Annual Pass ($39.99/yr)</button>
+          </div>
+
+          <div class="intel-card" style="border-color:var(--accent-amber);">
             <div>
               <h3>STATION CHIEF // LIFETIME</h3>
-              <div style="font-size:1.5rem; font-weight:700; color:var(--text-accent); margin:0.4rem 0;">$39.99 <span style="font-size:0.8rem; color:var(--text-secondary);">one-time</span></div>
-              <p>Permanent lifetime reservation of your <strong><code>@theintelligenceagency.net</code></strong> callsign, all current &amp; future Academy Certifications, and Founder Station Chief badge.</p>
+              <div style="font-size:1.5rem; font-weight:700; color:var(--accent-amber); margin:0.4rem 0;">$69 <span style="font-size:0.8rem; color:var(--text-secondary);">one-time</span></div>
+              <p>Permanent lifetime reservation of your <strong><code>@theintelligenceagency.net</code></strong> callsign, all current &amp; future Academy Certifications, and Gold Founder badge.</p>
             </div>
-            <button type="button" class="btn btn-accent" onclick="openEnlistModal('FOUNDER_LIFETIME')">⚡ Claim Lifetime Clearance</button>
+            <button type="button" class="btn" onclick="openEnlistModal('STATION_CHIEF_LIFETIME')" style="border-color:var(--accent-amber); color:var(--accent-amber);">⚡ Claim Station Chief ($69)</button>
           </div>
         </div>
       </div>

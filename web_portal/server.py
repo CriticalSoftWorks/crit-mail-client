@@ -36,6 +36,21 @@ SES_SMTP_HOST = os.environ.get("SES_SMTP_HOST", "email-smtp.us-east-1.amazonaws.
 SES_SMTP_PORT = int(os.environ.get("SES_SMTP_PORT", "465"))
 SES_SMTP_USER = os.environ.get("SES_SMTP_USER", "")
 SES_SMTP_PASS = os.environ.get("SES_SMTP_PASS", "")
+
+STRIPE_SECRET_KEY = os.environ.get(
+    "STRIPE_SECRET_KEY",
+    "sk_test_51UGLSwLDCe49tIs9CIWbMj7Qzigcc6w1DzOjFukxP3mK2a2hwBb45mNHeSkcNIKAEMHDTkr4SfwJdVinsDFT6pFl00CcqVc8wD"
+).strip()
+STRIPE_PUBLISHABLE_KEY = os.environ.get(
+    "STRIPE_PUBLISHABLE_KEY",
+    "pk_test_51UGLSwLDCe49tIs9jDMx9fxVaFfG4tuCdpDCZQoJOjv5QIImNdO2ARuU9Mg3RdNpFOtlEzdrWIhcH2RVjM6dZ7b500KPo765Hf"
+).strip()
+
+STRIPE_PRICE_IDS = {
+    "OPERATIVE_MONTHLY": "price_1USJHvLDCe49tIs9cXw4GDyO",
+    "OPERATIVE_ANNUAL": "price_1USJHwLDCe49tIs9h2ne71oO",
+    "STATION_CHIEF_LIFETIME": "price_1USJHwLDCe49tIs9pXxIeNXz",
+}
 STRIPE_CHECKOUT_URL = os.environ.get("STRIPE_CHECKOUT_URL", "")
 
 RESERVED_CALLSIGNS = {
@@ -1023,6 +1038,8 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                     "xp": agent["xp"],
                     "is_director": is_director,
                     "plan_tier": agent["plan_tier"],
+                    "stripe_customer_id": agent.get("stripe_customer_id") or "",
+                    "subscription_status": agent.get("subscription_status") or "active",
                     "created_at": agent["created_at"],
                     "imap_host": "mailserver.businessidentity.llc",
                     "imap_port": 993,
@@ -1596,7 +1613,7 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
             plan_tier = (body.get("plan_tier") or "OPERATIVE_MONTHLY").upper().strip()
             callsign = (agent["callsign"] if agent else (body.get("callsign") or "operative")).strip()
 
-            stripe_key = os.environ.get("STRIPE_SECRET_KEY", "").strip()
+            stripe_key = STRIPE_SECRET_KEY
 
             TIER_PRICES = {
                 "CADET_FREE": {"amount": 0, "currency": "usd", "name": "Cadet Recruit Access", "mode": "free"},
@@ -1608,22 +1625,26 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
 
             if stripe_key and tier_meta["mode"] != "free":
                 try:
+                    host = self.headers.get("Host") or DOMAIN
+                    protocol = "http" if ("localhost" in host or "127.0.0.1" in host) else "https"
+                    origin = f"{protocol}://{host}"
+
                     stripe_url = "https://api.stripe.com/v1/checkout/sessions"
                     params = {
                         "mode": tier_meta["mode"],
-                        "success_url": f"https://{DOMAIN}/?payment=success&tier={plan_tier}&session_id={{CHECKOUT_SESSION_ID}}",
-                        "cancel_url": f"https://{DOMAIN}/?payment=cancelled",
+                        "success_url": f"{origin}/?payment=success&tier={plan_tier}&session_id={{CHECKOUT_SESSION_ID}}",
+                        "cancel_url": f"{origin}/?payment=cancelled",
                         "client_reference_id": callsign,
                         "metadata[callsign]": callsign,
                         "metadata[plan_tier]": plan_tier,
-                        "line_items[0][price_data][currency]": tier_meta["currency"],
-                        "line_items[0][price_data][product_data][name]": tier_meta["name"],
-                        "line_items[0][price_data][unit_amount]": str(tier_meta["amount"]),
-                        "line_items[0][quantity]": "1"
+                        "line_items[0][price]": STRIPE_PRICE_IDS.get(plan_tier, ""),
+                        "line_items[0][quantity]": "1",
+                        "allow_promotion_codes": "true"
                     }
-                    if tier_meta["mode"] == "subscription":
-                        interval = "year" if plan_tier == "OPERATIVE_ANNUAL" else "month"
-                        params["line_items[0][price_data][recurring][interval]"] = interval
+                    if agent and agent.get("email_address"):
+                        params["customer_email"] = agent["email_address"]
+                    elif agent and agent.get("stripe_customer_id"):
+                        params["customer"] = agent["stripe_customer_id"]
 
                     post_data = urllib.parse.urlencode(params).encode("utf-8")
                     req = urllib.request.Request(stripe_url, data=post_data, method="POST")
@@ -1651,6 +1672,198 @@ class AgencyPortalHandler(SimpleHTTPRequestHandler):
                 "amount": tier_meta["amount"],
                 "message": f"Sandbox Billing Mode Active. Instant clearance activation available for {tier_meta['name']}."
             })
+
+        if path == "/api/billing/verify-checkout-session":
+            session_id = (body.get("session_id") or "").strip()
+            if not session_id:
+                return self._send_json(400, {"error": "Missing session_id."})
+
+            stripe_key = STRIPE_SECRET_KEY
+            if not stripe_key:
+                return self._send_json(500, {"error": "Stripe key not configured."})
+
+            try:
+                req = urllib.request.Request(f"https://api.stripe.com/v1/checkout/sessions/{session_id}", method="GET")
+                auth_header = base64.b64encode(f"{stripe_key}:".encode("utf-8")).decode("utf-8")
+                req.add_header("Authorization", f"Basic {auth_header}")
+                with urllib.request.urlopen(req, timeout=12) as stripe_resp:
+                    sess = json.loads(stripe_resp.read().decode("utf-8"))
+
+                if sess.get("payment_status") != "paid" and sess.get("status") != "complete":
+                    return self._send_json(400, {"error": "Payment session not completed."})
+
+                meta = sess.get("metadata") or {}
+                callsign = meta.get("callsign") or sess.get("client_reference_id") or ""
+                plan_tier = (meta.get("plan_tier") or "OPERATIVE_MONTHLY").upper().strip()
+                customer_id = sess.get("customer") or ""
+                sub_id = sess.get("subscription") or ""
+
+                agent = self._get_authenticated_agent()
+                if not callsign and agent:
+                    callsign = agent["callsign"]
+
+                if not callsign:
+                    return self._send_json(400, {"error": "Unable to resolve agent callsign for session."})
+
+                clearance_map = {
+                    "CADET_FREE": ("CADET RECRUIT", "CADET // LEVEL 1"),
+                    "OPERATIVE_MONTHLY": ("LEVEL-5 OPERATIVE", "SPECIAL AGENT // LEVEL 5"),
+                    "OPERATIVE_ANNUAL": ("LEVEL-5 OPERATIVE (ANNUAL)", "SENIOR OPERATIVE // LEVEL 5"),
+                    "STATION_CHIEF_LIFETIME": ("STATION CHIEF (LIFETIME)", "STATION CHIEF // LEVEL 5")
+                }
+                clearance_level, rank = clearance_map.get(plan_tier, ("LEVEL-5 OPERATIVE", "SPECIAL AGENT // LEVEL 5"))
+
+                conn = get_db()
+                conn.execute("""
+                    UPDATE agents 
+                    SET plan_tier = ?, clearance_level = ?, rank = ?, 
+                        stripe_customer_id = CASE WHEN ? != '' THEN ? ELSE stripe_customer_id END,
+                        stripe_subscription_id = CASE WHEN ? != '' THEN ? ELSE stripe_subscription_id END,
+                        subscription_status = 'active'
+                    WHERE callsign = ?
+                """, (plan_tier, clearance_level, rank, customer_id, customer_id, sub_id, sub_id, callsign))
+
+                now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+                conn.execute("""
+                    INSERT INTO transmissions (
+                        agent_callsign, folder, sender, recipient, subject, body, classification, is_read, created_at
+                    ) VALUES (?, 'inbox', 'directorate@theintelligenceagency.net', ?, ?, ?, 'CLEARANCE UPGRADE // STRIPE VERIFIED', 0, ?)
+                """, (
+                    callsign,
+                    f"{callsign}@theintelligenceagency.net",
+                    f"[DIRECTORATE] Verified Clearance Escalation to {clearance_level}",
+                    (
+                        f"OFFICIAL STRIPE CLEARANCE VERIFIED\n"
+                        f"===================================\n"
+                        f"Callsign        : {callsign}\n"
+                        f"Verified Plan   : {plan_tier}\n"
+                        f"Clearance Level : {clearance_level}\n"
+                        f"Rank            : {rank}\n"
+                        f"Stripe Session  : {session_id}\n"
+                        f"Status          : ACTIVE // ALL MODULES & CERTIFICATIONS UNLOCKED\n\n"
+                        f"Your clearance and webmail privileges have been officially updated."
+                    ),
+                    now_str
+                ))
+                conn.commit()
+                conn.close()
+
+                return self._send_json(200, {
+                    "ok": True,
+                    "plan_tier": plan_tier,
+                    "clearance_level": clearance_level,
+                    "rank": rank,
+                    "message": f"Payment verified! Clearance escalated to {clearance_level} ({plan_tier})."
+                })
+            except Exception as ex:
+                print(f"[VERIFY SESSION ERROR] {ex}")
+                return self._send_json(500, {"error": f"Failed to verify Stripe session: {ex}"})
+
+        if path == "/api/billing/customer-portal":
+            agent = self._get_authenticated_agent()
+            if not agent:
+                return self._send_json(401, {"error": "Unauthorized."})
+
+            stripe_key = STRIPE_SECRET_KEY
+            if not stripe_key:
+                return self._send_json(500, {"error": "Stripe key not configured."})
+
+            host = self.headers.get("Host") or DOMAIN
+            protocol = "http" if ("localhost" in host or "127.0.0.1" in host) else "https"
+            return_url = f"{protocol}://{host}/"
+
+            customer_id = (agent.get("stripe_customer_id") or "").strip()
+            if not customer_id:
+                try:
+                    q = urllib.parse.urlencode({"email": agent["email_address"], "limit": 1})
+                    req = urllib.request.Request(f"https://api.stripe.com/v1/customers?{q}", method="GET")
+                    auth_header = base64.b64encode(f"{stripe_key}:".encode("utf-8")).decode("utf-8")
+                    req.add_header("Authorization", f"Basic {auth_header}")
+                    with urllib.request.urlopen(req, timeout=10) as r:
+                        cust_data = json.loads(r.read().decode("utf-8"))
+                        if cust_data.get("data"):
+                            customer_id = cust_data["data"][0]["id"]
+                            conn = get_db()
+                            conn.execute("UPDATE agents SET stripe_customer_id = ? WHERE callsign = ?", (customer_id, agent["callsign"]))
+                            conn.commit()
+                            conn.close()
+                except Exception as ex:
+                    print(f"[CUSTOMER SEARCH ERROR] {ex}")
+
+            if not customer_id:
+                return self._send_json(400, {
+                    "error": "No Stripe customer account linked to this callsign yet. Upgrade your clearance first to manage subscriptions."
+                })
+
+            try:
+                portal_url = "https://api.stripe.com/v1/billing_portal/sessions"
+                params = urllib.parse.urlencode({
+                    "customer": customer_id,
+                    "return_url": return_url
+                }).encode("utf-8")
+                req = urllib.request.Request(portal_url, data=params, method="POST")
+                auth_header = base64.b64encode(f"{stripe_key}:".encode("utf-8")).decode("utf-8")
+                req.add_header("Authorization", f"Basic {auth_header}")
+                req.add_header("Content-Type", "application/x-www-form-urlencoded")
+                with urllib.request.urlopen(req, timeout=12) as r:
+                    portal_data = json.loads(r.read().decode("utf-8"))
+                    return self._send_json(200, {
+                        "ok": True,
+                        "portal_url": portal_data.get("url")
+                    })
+            except Exception as ex:
+                print(f"[PORTAL ERROR] {ex}")
+                return self._send_json(500, {"error": f"Failed to create billing portal: {ex}"})
+
+        if path == "/api/billing/webhook":
+            event_type = body.get("type", "")
+            data_obj = (body.get("data") or {}).get("object") or {}
+            print(f"[STRIPE WEBHOOK] Received event: {event_type}")
+
+            conn = get_db()
+            if event_type == "checkout.session.completed":
+                meta = data_obj.get("metadata") or {}
+                callsign = meta.get("callsign") or data_obj.get("client_reference_id")
+                plan_tier = (meta.get("plan_tier") or "OPERATIVE_MONTHLY").upper().strip()
+                customer_id = data_obj.get("customer") or ""
+                sub_id = data_obj.get("subscription") or ""
+
+                if callsign:
+                    clearance_map = {
+                        "CADET_FREE": ("CADET RECRUIT", "CADET // LEVEL 1"),
+                        "OPERATIVE_MONTHLY": ("LEVEL-5 OPERATIVE", "SPECIAL AGENT // LEVEL 5"),
+                        "OPERATIVE_ANNUAL": ("LEVEL-5 OPERATIVE (ANNUAL)", "SENIOR OPERATIVE // LEVEL 5"),
+                        "STATION_CHIEF_LIFETIME": ("STATION CHIEF (LIFETIME)", "STATION CHIEF // LEVEL 5")
+                    }
+                    clearance_level, rank = clearance_map.get(plan_tier, ("LEVEL-5 OPERATIVE", "SPECIAL AGENT // LEVEL 5"))
+                    conn.execute("""
+                        UPDATE agents 
+                        SET plan_tier = ?, clearance_level = ?, rank = ?, 
+                            stripe_customer_id = CASE WHEN ? != '' THEN ? ELSE stripe_customer_id END,
+                            stripe_subscription_id = CASE WHEN ? != '' THEN ? ELSE stripe_subscription_id END,
+                            subscription_status = 'active'
+                        WHERE callsign = ?
+                    """, (plan_tier, clearance_level, rank, customer_id, customer_id, sub_id, sub_id, callsign))
+                    conn.commit()
+
+            elif event_type == "customer.subscription.deleted":
+                sub_id = data_obj.get("id")
+                if sub_id:
+                    conn.execute("""
+                        UPDATE agents
+                        SET plan_tier = 'CADET_FREE', clearance_level = 'CADET RECRUIT', rank = 'CADET // LEVEL 1', subscription_status = 'canceled'
+                        WHERE stripe_subscription_id = ?
+                    """, (sub_id,))
+                    conn.commit()
+
+            elif event_type == "invoice.payment_failed":
+                sub_id = data_obj.get("subscription")
+                if sub_id:
+                    conn.execute("UPDATE agents SET subscription_status = 'past_due' WHERE stripe_subscription_id = ?", (sub_id,))
+                    conn.commit()
+
+            conn.close()
+            return self._send_json(200, {"received": True})
 
         if path == "/api/billing/simulate-upgrade":
             agent = self._get_authenticated_agent()

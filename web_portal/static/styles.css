@@ -818,5 +818,208 @@ details.lesson-disclosure > summary::-webkit-details-marker {
   text-align: center;
 }
 
+/* ==========================================================================
+   DISPLAY STYLE: MODERN SLEEK THEME ([data-theme="modern"])
+   ========================================================================== */
+
+[data-theme="modern"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif;
+  --bg-deep: #0a0e17;
+  --bg-panel: #111726;
+  --bg-card: #162032;
+  --bg-input: #0e1626;
+  --border-subtle: #23334d;
+  --border-active: #38bdf8;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-accent: #38bdf8;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #f43f5e;
+}
+
+[data-theme="modern"] body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header & Nav */
+[data-theme="modern"] .top-nav {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0.75rem 1.5rem;
+}
+
+[data-theme="modern"] .brand-title {
+  font-family: var(--font-sans);
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+[data-theme="modern"] .brand-sub {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+[data-theme="modern"] .brand-logo {
+  border-radius: 8px !important;
+  border-color: var(--border-subtle);
+}
+
+/* Modern Buttons */
+[data-theme="modern"] .btn {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  border-radius: 6px !important;
+  letter-spacing: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="modern"] .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="modern"] .btn-accent {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border-color: #38bdf8;
+}
+
+[data-theme="modern"] .btn-green {
+  background: linear-gradient(180deg, #059669 0%, #047857 100%);
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+/* Modern Inputs & Form Controls */
+[data-theme="modern"] .cyber-input,
+[data-theme="modern"] select.cyber-input,
+[data-theme="modern"] textarea.cyber-input,
+[data-theme="modern"] .input-group input,
+[data-theme="modern"] .input-group .domain-suffix {
+  font-family: var(--font-sans);
+  border-radius: 6px !important;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+[data-theme="modern"] .cyber-input:focus,
+[data-theme="modern"] .input-group input:focus {
+  border-color: var(--border-active);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+  outline: none;
+}
+
+/* Modern Cards & Containers */
+[data-theme="modern"] .intel-card,
+[data-theme="modern"] .hero-panel,
+[data-theme="modern"] .tier-card,
+[data-theme="modern"] details.academy-disclosure,
+[data-theme="modern"] details.lesson-disclosure,
+[data-theme="modern"] .exam-question-card,
+[data-theme="modern"] .cert-diploma-card,
+[data-theme="modern"] .cyber-lab-box,
+[data-theme="modern"] .callsign-checker-box,
+[data-theme="modern"] .hq-banner,
+[data-theme="modern"] #compose-drawer,
+[data-theme="modern"] #message-reader-container {
+  border-radius: 12px !important;
+  border-color: var(--border-subtle);
+  background: var(--bg-card);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="modern"] .tier-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(56, 189, 248, 0.2);
+}
+
+/* Tabs & Navigation */
+[data-theme="modern"] .hq-tabs {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+[data-theme="modern"] .tab-btn {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  border-radius: 8px 8px 0 0 !important;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+[data-theme="modern"] .tab-btn.active {
+  background: var(--bg-card);
+  border-color: var(--border-subtle) var(--border-subtle) transparent;
+  color: var(--text-accent);
+}
+
+/* Status Pills & Badges */
+[data-theme="modern"] .status-pill {
+  border-radius: 9999px !important;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Dialogs / Modals */
+[data-theme="modern"] .cyber-dialog {
+  border-radius: 16px !important;
+  border: 1px solid var(--border-subtle);
+  background: #0f172a;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+  font-family: var(--font-sans);
+}
+
+/* Academy Reading Experience */
+[data-theme="modern"] .lesson-theory {
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  line-height: 1.78;
+  color: #e2e8f0;
+  margin-bottom: 1.25rem;
+}
+
+[data-theme="modern"] .objectives-box {
+  border-radius: 8px !important;
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  font-family: var(--font-sans);
+}
+
+[data-theme="modern"] .checkpoint-box {
+  border-radius: 8px !important;
+  background: #111d30;
+  border: 1px solid #233c63;
+  font-family: var(--font-sans);
+}
+
+[data-theme="modern"] .course-progress-track,
+[data-theme="modern"] .course-progress-fill {
+  border-radius: 6px !important;
+}
+
+/* Preserving Monospace on Technical / Code Elements */
+[data-theme="modern"] .cipher-box,
+[data-theme="modern"] code,
+[data-theme="modern"] pre,
+[data-theme="modern"] .lab-terminal-screen,
+[data-theme="modern"] .lab-prompt-prefix,
+[data-theme="modern"] .lab-chip,
+[data-theme="modern"] #dossier-license-key,
+[data-theme="modern"] .st-lesson-id {
+  font-family: var(--font-mono) !important;
+}
+
 
 
