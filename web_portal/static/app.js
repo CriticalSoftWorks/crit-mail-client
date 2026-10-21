@@ -366,8 +366,9 @@ async function loadAgentDashboard() {
       foiaContainer.appendChild(card);
     });
 
-    // Render Earned Certificates & Academy Courses
+    // Render Earned Certificates, Academy Courses & Personal Field Codex
     renderAcademySection(data.academy_courses || [], data.certificates || []);
+    renderLibrarySection(data.academy_courses || [], data.certificates || []);
 
     // Update Dossier clearance plan badge
     const planBadge = document.getElementById("dossier-plan-badge");
@@ -713,6 +714,440 @@ function renderAcademySection(courses, certificates) {
     coursesContainer.appendChild(details);
   });
 }
+
+// ===========================================================================
+// 2.5 Directorate Technical Library & Personal Field Codex
+// ===========================================================================
+
+const GLOBAL_LIBRARY_DOCS = [
+  {
+    id: "doc-net-01",
+    code: "DOC-NET-01",
+    title: "SPF, DKIM (2048-bit RSA) & DMARC Enforcement Field Guide",
+    division: "DIVISION 01 // NETWORK DEFENSE",
+    category: "NETWORKING",
+    tag: "NETWORKING",
+    tier: "CADET_FREE",
+    summary: "Production specifications for triple-layer email cryptographic authentication: SPF syntax, DKIM 2048-bit RSA selector DNS publication, and DMARC p=reject alignment.",
+    key_points: [
+      "SPF validates sending IP addresses via DNS TXT records (e.g. v=spf1 include:amazonses.com ~all).",
+      "DKIM attaches an RSA-SHA256 cryptographic signature to email headers verified by a 2048-bit public key in DNS.",
+      "DMARC requires either SPF or DKIM to align with the From header; p=reject instructs recipient servers to drop unaligned mail."
+    ],
+    code_title: "PRODUCTION DNS RECORDS & PYTHON VERIFICATION SNIPPET",
+    code_sample: `# DNS Publication Records
+# 1. SPF: theintelligenceagency.net  TXT  "v=spf1 include:amazonses.com ~all"
+# 2. DKIM: s1._domainkey.theintelligenceagency.net  TXT  "v=DKIM1; k=rsa; p=MIIBIjANBgkqhki..."
+# 3. DMARC: _dmarc.theintelligenceagency.net  TXT  "v=DMARC1; p=reject; pct=100; rua=mailto:dmarc-reports@theintelligenceagency.net"
+
+import dns.resolver
+
+def check_email_security(domain):
+    results = {}
+    try:
+        answers = dns.resolver.resolve(domain, "TXT")
+        results["SPF"] = [str(r) for r in answers if "v=spf1" in str(r)]
+    except Exception:
+        results["SPF"] = []
+    try:
+        dmarc_answers = dns.resolver.resolve(f"_dmarc.{domain}", "TXT")
+        results["DMARC"] = [str(r) for r in dmarc_answers if "v=DMARC1" in str(r)]
+    except Exception:
+        results["DMARC"] = []
+    return results
+
+# Example check
+print(check_email_security("theintelligenceagency.net"))`
+  },
+  {
+    id: "doc-cry-01",
+    code: "DOC-CRY-01",
+    title: "Authenticated Encryption Standard: AES-256-GCM & PBKDF2 Key Stretching",
+    division: "DIVISION 02 // APPLIED CRYPTOGRAPHY",
+    category: "CRYPTOGRAPHY",
+    tag: "CRYPTOGRAPHY",
+    tier: "CADET_FREE",
+    summary: "NIST-aligned authenticated symmetric encryption. AES-256-GCM guarantees both confidentiality and ciphertext integrity via a 128-bit MAC tag, preventing bit-flipping attacks.",
+    key_points: [
+      "Always generate a unique 12-byte (96-bit) CSPRNG nonce for every encryption operation; never reuse nonces with the same key.",
+      "Derive encryption keys from passwords using PBKDF2-HMAC-SHA256 with at least 200,000 iterations and a 16-byte random salt.",
+      "GCM mode authenticates both the ciphertext and optional Additional Authenticated Data (AAD) without encrypting the AAD."
+    ],
+    code_title: "PYTHON REFERENCE: AES-256-GCM CIPHER ENGINES",
+    code_sample: `import os
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+
+def derive_key(passphrase: str, salt: bytes) -> bytes:
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=200_000
+    )
+    return kdf.derive(passphrase.encode('utf-8'))
+
+def encrypt_payload(plaintext: bytes, key: bytes, aad: bytes = b"") -> tuple[bytes, bytes]:
+    nonce = os.urandom(12)  # 96-bit nonce
+    aesgcm = AESGCM(key)
+    ciphertext = aesgcm.encrypt(nonce, plaintext, aad)
+    return nonce, ciphertext
+
+def decrypt_payload(nonce: bytes, ciphertext: bytes, key: bytes, aad: bytes = b"") -> bytes:
+    aesgcm = AESGCM(key)
+    return aesgcm.decrypt(nonce, ciphertext, aad)`
+  },
+  {
+    id: "doc-lnx-01",
+    code: "DOC-LNX-01",
+    title: "Linux Server Hardening & Zero-Trust SSH Quick Reference",
+    division: "DIVISION 04 // INFRASTRUCTURE DEFENSE",
+    category: "LINUX",
+    tag: "LINUX",
+    tier: "CADET_FREE",
+    summary: "High-impact Linux host security baseline: disabling password auth, restricting root access, isolating systemd services, and configuring host firewalls.",
+    key_points: [
+      "Set PasswordAuthentication no and PermitRootLogin prohibit-password in /etc/ssh/sshd_config.",
+      "Enforce least-privilege file permissions: chmod 700 on ~/.ssh, chmod 600 on authorized_keys and private keys.",
+      "Harden systemd service units with ProtectSystem=strict, PrivateTmp=true, and NoNewPrivileges=true."
+    ],
+    code_title: "ESSENTIAL LINUX SECURITY COMMANDS",
+    code_sample: `# 1. Audit listening ports and bound interfaces
+sudo ss -tulpn
+
+# 2. Inspect failed SSH authentication attempts in real-time
+sudo journalctl -u ssh -p err --no-pager -n 50
+
+# 3. Restrict host firewall to essential ingress (SSH, Web)
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+
+# 4. Check world-writable files across system
+sudo find / -xdev -type f -perm -0002 2>/dev/null`
+  },
+  {
+    id: "doc-soc-01",
+    code: "DOC-SOC-01",
+    title: "SOC Incident Response Playbook: NIST SP 800-61 Lifecycle",
+    division: "DIVISION 03 // INCIDENT RESPONSE",
+    category: "SOC",
+    tag: "SOC",
+    tier: "CADET_FREE",
+    summary: "Structured four-phase incident response methodology: Preparation, Detection & Analysis, Containment/Eradication, and Post-Incident Review.",
+    key_points: [
+      "Preparation: Baseline normal traffic, train analysts, maintain jump boxes and offline log vaults.",
+      "Detection & Analysis: Correlate alerts, verify false-positives, determine scope and attack vector.",
+      "Containment & Eradication: Isolate compromised hosts immediately, revoke compromised session tokens, patch exploit vector.",
+      "Post-Incident: Document lessons learned, update detection rules, retain evidence chain of custody."
+    ],
+    code_title: "PYTHON IOC EXTRACTION REGEX SUITE",
+    code_sample: `import re
+
+def extract_indicators_of_compromise(raw_text: str) -> dict:
+    ip_pattern = r'\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b'
+    sha256_pattern = r'\\b[a-fA-F0-9]{64}\\b'
+    md5_pattern = r'\\b[a-fA-F0-9]{32}\\b'
+    domain_pattern = r'\\b(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}\\b'
+
+    return {
+        "ipv4": list(set(re.findall(ip_pattern, raw_text))),
+        "sha256": list(set(re.findall(sha256_pattern, raw_text))),
+        "md5": list(set(re.findall(md5_pattern, raw_text))),
+        "domains": [d for d in set(re.findall(domain_pattern, raw_text)) if not d.endswith('.com') or 'bad' in d]
+    }`
+  },
+  {
+    id: "doc-soc-02",
+    code: "DOC-SOC-02",
+    title: "Punycode Homograph & Phishing Header Forensics",
+    division: "DIVISION 03 // SOC OPERATIONS",
+    category: "SOC",
+    tag: "SOC",
+    tier: "CADET_FREE",
+    summary: "Forensic analysis of Internationalized Domain Names (IDN) used in phishing lures and deconstruction of email hop headers.",
+    key_points: [
+      "Attackers swap ASCII characters with identical-looking Cyrillic, Greek, or Latin characters (e.g. Cyrillic 'а' U+0430).",
+      "Web browsers convert IDN homographs into punycode starting with 'xn--' (e.g. 'xn--pple-43d.com').",
+      "Inspect Received: headers from bottom-to-top to trace the true originating mail transfer agent (MTA)."
+    ],
+    code_title: "IDN PUNYCODE FORENSIC DETECTION SCRIPT",
+    code_sample: `def audit_domain_homograph(domain: str) -> dict:
+    is_punycode = domain.lower().startswith("xn--") or ".xn--" in domain.lower()
+    decoded = domain
+    if is_punycode:
+        try:
+            decoded = domain.encode('ascii').decode('idna')
+        except Exception:
+            pass
+    mixed_scripts = any(ord(c) > 127 for c in decoded)
+    return {
+        "raw_domain": domain,
+        "decoded_idna": decoded,
+        "is_punycode": is_punycode,
+        "mixed_scripts_flag": mixed_scripts,
+        "risk_level": "HIGH" if (is_punycode or mixed_scripts) else "LOW"
+    }`
+  },
+  {
+    id: "doc-cry-02",
+    code: "DOC-CRY-02",
+    title: "Constant-Time Secret Verification & Side-Channel Timing Defense",
+    division: "DIVISION 02 // SECURITY ENGINEERING",
+    category: "CRYPTOGRAPHY",
+    tag: "CRYPTOGRAPHY",
+    tier: "CADET_FREE",
+    summary: "Preventing timing side-channel attacks during password, token, and HMAC verification using constant-time algorithms.",
+    key_points: [
+      "Standard equality operators (a == b) short-circuit on the first mismatched byte, leaking execution duration.",
+      "An attacker measuring sub-millisecond response times can brute-force secrets one character at a time.",
+      "Python's hmac.compare_digest() executes in constant time regardless of where or whether the strings differ."
+    ],
+    code_title: "CONSTANT-TIME VERIFICATION IMPLEMENTATION",
+    code_sample: `import hmac
+import secrets
+
+def secure_token_verify(user_submitted: str, stored_token: str) -> bool:
+    return hmac.compare_digest(
+        user_submitted.encode('utf-8'),
+        stored_token.encode('utf-8')
+    )
+
+def generate_secure_api_key(prefix: str = "TIA-KEY-") -> str:
+    random_hex = secrets.token_hex(24)
+    return f"{prefix}{random_hex}"`
+  }
+];
+
+let activeLibraryView = "codex";
+let activeLibraryTag = "ALL";
+let cachedCodexArticles = [];
+
+function switchLibraryView(view) {
+  activeLibraryView = view;
+  const codexView = document.getElementById("library-codex-view");
+  const globalView = document.getElementById("library-global-view");
+  const btnCodex = document.getElementById("btn-lib-codex");
+  const btnGlobal = document.getElementById("btn-lib-global");
+
+  if (view === "codex") {
+    if (codexView) codexView.style.display = "block";
+    if (globalView) globalView.style.display = "none";
+    if (btnCodex) { btnCodex.classList.add("btn-accent", "active"); }
+    if (btnGlobal) { btnGlobal.classList.remove("btn-accent", "active"); }
+  } else {
+    if (codexView) codexView.style.display = "none";
+    if (globalView) globalView.style.display = "block";
+    if (btnCodex) { btnCodex.classList.remove("btn-accent", "active"); }
+    if (btnGlobal) { btnGlobal.classList.add("btn-accent", "active"); }
+  }
+  filterLibraryArticles();
+}
+window.switchLibraryView = switchLibraryView;
+
+function setLibraryTagFilter(tag) {
+  activeLibraryTag = tag.toUpperCase();
+  document.querySelectorAll(".lib-tag-chip").forEach((chip) => {
+    if (chip.dataset.tag === activeLibraryTag) {
+      chip.classList.add("active");
+    } else {
+      chip.classList.remove("active");
+    }
+  });
+  filterLibraryArticles();
+}
+window.setLibraryTagFilter = setLibraryTagFilter;
+
+function clearLibrarySearch() {
+  const input = document.getElementById("library-search-input");
+  if (input) input.value = "";
+  setLibraryTagFilter("ALL");
+}
+window.clearLibrarySearch = clearLibrarySearch;
+
+function filterLibraryArticles() {
+  const q = (document.getElementById("library-search-input")?.value || "").toLowerCase().trim();
+  const targetContainerId = activeLibraryView === "codex" ? "library-codex-list" : "library-global-list";
+  const container = document.getElementById(targetContainerId);
+  if (!container) return;
+
+  const cards = container.querySelectorAll(".lib-card");
+  cards.forEach((card) => {
+    const text = card.textContent.toLowerCase();
+    const tag = (card.dataset.tag || "").toUpperCase();
+    const matchesTag = activeLibraryTag === "ALL" || tag.includes(activeLibraryTag);
+    const matchesSearch = !q || text.includes(q);
+
+    if (matchesTag && matchesSearch) {
+      card.style.display = "";
+    } else {
+      card.style.display = "none";
+    }
+  });
+}
+window.filterLibraryArticles = filterLibraryArticles;
+
+function jumpToAcademyCourse(courseId, lessonId) {
+  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+  document.querySelectorAll(".hq-pane").forEach((p) => p.classList.remove("active"));
+  const acadBtn = document.querySelector('.tab-btn[data-tab="pane-academy"]');
+  const acadPane = document.getElementById("pane-academy");
+  if (acadBtn) acadBtn.classList.add("active");
+  if (acadPane) acadPane.classList.add("active");
+
+  setTimeout(() => {
+    const targetCard = document.getElementById(`lesson-card-hq-${lessonId}`);
+    if (targetCard) {
+      targetCard.open = true;
+      targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 100);
+}
+window.jumpToAcademyCourse = jumpToAcademyCourse;
+
+function renderLibrarySection(courses, certificates) {
+  const codexContainer = document.getElementById("library-codex-list");
+  const globalContainer = document.getElementById("library-global-list");
+  const codexCountEl = document.getElementById("lib-codex-count");
+  const globalCountEl = document.getElementById("lib-global-count");
+
+  // 1. Compile Personal Codex from completed courses & modules
+  cachedCodexArticles = [];
+  (courses || []).forEach((c) => {
+    const isCourseCertComplete = (certificates || []).some((cert) => cert.course_id === c.id);
+    let courseTag = "NETWORKING";
+    const divUpper = (c.division || "").toUpperCase();
+    const titleUpper = (c.title || "").toUpperCase();
+    if (divUpper.includes("CRYPT") || titleUpper.includes("CRYPT")) courseTag = "CRYPTOGRAPHY";
+    else if (divUpper.includes("LINUX") || titleUpper.includes("LINUX") || titleUpper.includes("HARDENING")) courseTag = "LINUX";
+    else if (divUpper.includes("SOC") || titleUpper.includes("THREAT") || titleUpper.includes("HUNT")) courseTag = "SOC";
+
+    (c.modules || []).forEach((m, mIdx) => {
+      if (m.completed || isCourseCertComplete) {
+        cachedCodexArticles.push({
+          id: `codex-${c.id}-m${mIdx + 1}`,
+          course_id: c.id,
+          course_code: c.code,
+          course_title: c.title,
+          division: c.division,
+          lesson_id: m.lesson_id || `${c.id}-m${mIdx + 1}`,
+          title: m.title,
+          duration: m.duration || "20 min",
+          objectives: m.objectives || [],
+          content: m.content || "",
+          code_sample: m.code_sample || "",
+          tag: courseTag
+        });
+      }
+    });
+  });
+
+  if (codexCountEl) codexCountEl.textContent = cachedCodexArticles.length;
+  if (globalCountEl) globalCountEl.textContent = GLOBAL_LIBRARY_DOCS.length;
+
+  // 2. Render Personal Codex View
+  if (codexContainer) {
+    codexContainer.innerHTML = "";
+    if (cachedCodexArticles.length === 0) {
+      codexContainer.innerHTML = `
+        <div class="lib-card" style="text-align:center; padding:2.5rem 1.5rem; border-style:dashed;">
+          <div style="font-size:2rem; margin-bottom:0.5rem;">🗂</div>
+          <h4 style="color:var(--text-accent); font-size:1.05rem; margin-bottom:0.4rem;">YOUR PERSONAL FIELD CODEX IS EMPTY</h4>
+          <p style="color:var(--text-secondary); font-size:0.83rem; max-width:540px; margin:0 auto 1.25rem; line-height:1.55;">
+            As you study Academy chapters and verify lesson checkpoints (+50 XP), your personal field manual, reference Python scripts, and technical takeaways will automatically index here for fast operational lookup.
+          </p>
+          <button type="button" class="btn btn-green" onclick="document.querySelector('.tab-btn[data-tab=\\'pane-academy\\']').click()">
+            🎓 Start Studying in the Academy &rarr;
+          </button>
+        </div>
+      `;
+    } else {
+      cachedCodexArticles.forEach((art) => {
+        const card = document.createElement("div");
+        card.className = "lib-card";
+        card.dataset.tag = `${art.tag} STANDARDS`;
+
+        const objHtml = (art.objectives || []).map((o) => `<li>${escapeHtml(o)}</li>`).join("");
+
+        card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
+            <div>
+              <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; margin-bottom:0.3rem;">
+                <span class="lib-meta-pill" style="color:var(--accent-green); border-color:var(--accent-green);">✔ MASTERED CHAPTER</span>
+                <span class="lib-meta-pill">[${escapeHtml(art.course_code)}] ${escapeHtml(art.course_title)}</span>
+                <span class="lib-meta-pill">#${art.tag}</span>
+              </div>
+              <h4 style="color:#ffffff; font-size:0.98rem; font-weight:700;">📖 ${escapeHtml(art.title)}</h4>
+            </div>
+            <button type="button" class="btn" style="font-size:0.72rem; padding:0.25rem 0.6rem;" onclick="jumpToAcademyCourse('${escapeHtml(art.course_id)}', '${escapeHtml(art.lesson_id)}')">
+              🎓 Open in Course
+            </button>
+          </div>
+          ${objHtml ? `
+            <div class="objectives-box" style="margin-bottom:0.75rem;">
+              <div style="color:var(--text-accent); font-size:0.73rem; font-weight:700;">🎯 KEY OPERATIONAL TAKEAWAYS:</div>
+              <ul style="margin:0.25rem 0 0 1.15rem; font-size:0.77rem; color:var(--text-primary);">${objHtml}</ul>
+            </div>
+          ` : ""}
+          <div class="lesson-theory" style="font-size:0.83rem; margin-bottom:0.75rem;">${escapeHtml(art.content)}</div>
+          ${art.code_sample ? `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+              <span style="color:var(--text-accent); font-size:0.73rem; font-weight:700;">💻 FIELD REFERENCE IMPLEMENTATION</span>
+              <button type="button" class="btn" style="padding:0.2rem 0.55rem; font-size:0.7rem;" onclick="copyLessonCode(this)">📋 Copy Code</button>
+            </div>
+            <div class="cipher-box" style="margin:0; font-size:0.78rem; line-height:1.5;">${escapeHtml(art.code_sample)}</div>
+          ` : ""}
+        `;
+        codexContainer.appendChild(card);
+      });
+    }
+  }
+
+  // 3. Render Global Directorate Archives View
+  if (globalContainer) {
+    globalContainer.innerHTML = "";
+    GLOBAL_LIBRARY_DOCS.forEach((doc) => {
+      const card = document.createElement("div");
+      card.className = "lib-card";
+      card.dataset.tag = `${doc.tag} STANDARDS`;
+
+      const ptsHtml = (doc.key_points || []).map((pt) => `<li>${escapeHtml(pt)}</li>`).join("");
+
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
+          <div>
+            <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; margin-bottom:0.3rem;">
+              <span class="lib-meta-pill" style="color:var(--text-accent); border-color:var(--text-accent); font-weight:700;">${escapeHtml(doc.code)}</span>
+              <span class="lib-meta-pill">${escapeHtml(doc.division)}</span>
+              <span class="lib-meta-pill">#${escapeHtml(doc.tag)}</span>
+              <span class="lib-meta-pill" style="color:var(--accent-green);">OPEN ACCESS</span>
+            </div>
+            <h4 style="color:#ffffff; font-size:0.98rem; font-weight:700;">📜 ${escapeHtml(doc.title)}</h4>
+          </div>
+          <button type="button" class="btn" style="font-size:0.72rem; padding:0.25rem 0.6rem;" onclick="copyLessonCode(this)">
+            📋 Copy Snippet
+          </button>
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.82rem; margin-bottom:0.75rem;">${escapeHtml(doc.summary)}</p>
+        <div class="objectives-box" style="margin-bottom:0.75rem;">
+          <div style="color:var(--accent-amber); font-size:0.73rem; font-weight:700;">📌 STANDARDS &amp; SPECIFICATIONS:</div>
+          <ul style="margin:0.25rem 0 0 1.15rem; font-size:0.77rem; color:var(--text-primary);">${ptsHtml}</ul>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+          <span style="color:var(--text-accent); font-size:0.73rem; font-weight:700;">💻 ${escapeHtml(doc.code_title)}</span>
+          <button type="button" class="btn" style="padding:0.2rem 0.55rem; font-size:0.7rem;" onclick="copyLessonCode(this)">📋 Copy Code</button>
+        </div>
+        <div class="cipher-box" style="margin:0; font-size:0.78rem; line-height:1.5;">${escapeHtml(doc.code_sample)}</div>
+      `;
+      globalContainer.appendChild(card);
+    });
+  }
+}
+window.renderLibrarySection = renderLibrarySection;
 
 async function loadPublicAcademyCurriculum() {
   const pubContainer = document.getElementById("public-academy-accordion");

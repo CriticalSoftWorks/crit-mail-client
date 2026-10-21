@@ -74,6 +74,7 @@
       <nav class="hq-tabs" aria-label="Agent HQ Sections">
         <button type="button" class="tab-btn active" data-tab="pane-webmail">📬 SIGINT Webmail &amp; Inbox</button>
         <button type="button" class="tab-btn" data-tab="pane-academy">🎓 Cyber &amp; IT Academy</button>
+        <button type="button" class="tab-btn" data-tab="pane-library">📚 Library &amp; Field Codex</button>
         <button type="button" class="tab-btn" data-tab="pane-missions">🧩 Cryptanalysis &amp; Recon Ops</button>
         <button type="button" class="tab-btn" data-tab="pane-foia">🗄 Declassified FOIA Vault</button>
         <button type="button" class="tab-btn" data-tab="pane-dossier">🎖 Operative Dossier &amp; Credentials</button>
@@ -138,6 +139,60 @@
 
         <!-- Exclusive Accordion of Courses -->
         <div id="hq-academy-courses-container" class="academy-accordion-group"></div>
+      </div>
+
+      <!-- TAB 2.5: DIRECTORATE LIBRARY & PERSONAL FIELD CODEX -->
+      <div class="hq-pane" id="pane-library">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem; margin-bottom:0.75rem;">
+          <div>
+            <h3 style="color:var(--text-accent); margin-bottom:0.25rem;">📚 DIRECTORATE TECHNICAL LIBRARY &amp; PERSONAL FIELD CODEX</h3>
+            <div style="font-size:0.78rem; color:var(--text-secondary);">
+              Declassified engineering playbooks, security standards, and your personal auto-compiled field binder.
+            </div>
+          </div>
+          <div style="display:flex; gap:0.45rem; align-items:center;">
+            <button type="button" class="btn btn-accent lib-view-toggle active" id="btn-lib-codex" onclick="switchLibraryView('codex')">🗂 My Completed Codex (<span id="lib-codex-count">0</span>)</button>
+            <button type="button" class="btn lib-view-toggle" id="btn-lib-global" onclick="switchLibraryView('global')">🌐 Directorate Archives (<span id="lib-global-count">6</span>)</button>
+          </div>
+        </div>
+
+        <!-- Search & Tag Filter Bar -->
+        <div class="callsign-checker-box" style="margin-bottom:1.25rem; padding:0.85rem 1rem;">
+          <div style="display:flex; gap:0.65rem; flex-wrap:wrap; align-items:center; margin-bottom:0.65rem;">
+            <input
+              type="search"
+              id="library-search-input"
+              class="cyber-input"
+              style="flex:1 1 280px;"
+              placeholder="🔍 Search theory, Python snippets, NIST standards, CLI commands..."
+              oninput="filterLibraryArticles()"
+            />
+            <button type="button" class="btn" onclick="clearLibrarySearch()">Clear Search</button>
+          </div>
+          <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+            <span style="font-size:0.72rem; color:var(--text-secondary); margin-right:0.3rem;">FILTER BY TAG:</span>
+            <button type="button" class="lib-tag-chip active" data-tag="ALL" onclick="setLibraryTagFilter('ALL')">All Topics</button>
+            <button type="button" class="lib-tag-chip" data-tag="NETWORKING" onclick="setLibraryTagFilter('NETWORKING')">#Networking</button>
+            <button type="button" class="lib-tag-chip" data-tag="CRYPTOGRAPHY" onclick="setLibraryTagFilter('CRYPTOGRAPHY')">#Cryptography</button>
+            <button type="button" class="lib-tag-chip" data-tag="LINUX" onclick="setLibraryTagFilter('LINUX')">#Linux/Hardening</button>
+            <button type="button" class="lib-tag-chip" data-tag="SOC" onclick="setLibraryTagFilter('SOC')">#SOC/Threats</button>
+            <button type="button" class="lib-tag-chip" data-tag="STANDARDS" onclick="setLibraryTagFilter('STANDARDS')">#NIST/Standards</button>
+          </div>
+        </div>
+
+        <!-- Section A: Personal Field Codex (auto-transfers completed modules) -->
+        <div id="library-codex-view">
+          <div id="library-codex-list">
+            <!-- Dynamically populated from completed course modules -->
+          </div>
+        </div>
+
+        <!-- Section B: Global Directorate Reference Archives -->
+        <div id="library-global-view" style="display:none;">
+          <div id="library-global-list">
+            <!-- Dynamically populated with declassified reference playbooks -->
+          </div>
+        </div>
       </div>
 
       <!-- TAB 3: CRYPTANALYSIS & RECON MISSIONS -->

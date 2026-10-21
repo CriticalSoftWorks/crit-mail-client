@@ -820,6 +820,51 @@ details.lesson-disclosure > summary::-webkit-details-marker {
 }
 
 /* ==========================================================================
+   DIRECTORATE TECHNICAL LIBRARY & PERSONAL FIELD CODEX
+   ========================================================================== */
+
+.lib-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1.15rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.lib-card:hover {
+  border-color: var(--text-accent);
+}
+
+.lib-tag-chip {
+  background: #091524;
+  border: 1px solid #1c3654;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lib-tag-chip.active,
+.lib-tag-chip:hover {
+  border-color: var(--text-accent);
+  color: var(--text-accent);
+  background: rgba(0, 229, 255, 0.12);
+}
+
+.lib-meta-pill {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.2rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ==========================================================================
    DISPLAY STYLE: MODERN SLEEK THEME ([data-theme="modern"])
    ========================================================================== */
 
@@ -925,6 +970,7 @@ details.lesson-disclosure > summary::-webkit-details-marker {
 [data-theme="modern"] .intel-card,
 [data-theme="modern"] .hero-panel,
 [data-theme="modern"] .tier-card,
+[data-theme="modern"] .lib-card,
 [data-theme="modern"] details.academy-disclosure,
 [data-theme="modern"] details.lesson-disclosure,
 [data-theme="modern"] .exam-question-card,
@@ -938,6 +984,17 @@ details.lesson-disclosure > summary::-webkit-details-marker {
   border-color: var(--border-subtle);
   background: var(--bg-card);
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="modern"] .lib-tag-chip {
+  border-radius: 9999px !important;
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+
+[data-theme="modern"] .lib-meta-pill {
+  border-radius: 6px !important;
+  font-family: var(--font-sans);
 }
 
 [data-theme="modern"] .tier-card:hover {
